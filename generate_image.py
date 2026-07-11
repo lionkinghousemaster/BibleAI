@@ -8,6 +8,8 @@ import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from character_manager import CharacterManager
+
 
 class ImageProvider(ABC):
     @abstractmethod
@@ -132,3 +134,26 @@ DEFAULT_PROVIDER = DummyProvider()
 
 def generate_image_from_prompt(prompt: str, output_path: str, provider: ImageProvider = None) -> None:
     (provider or DEFAULT_PROVIDER).generate(prompt, output_path)
+
+
+def build_character_aware_prompt(
+    base_prompt: str,
+    character_ids: list,
+    manager: CharacterManager = None,
+) -> str:
+    """把 scene 的 character_ids 對應到的 visual_prompt 接在 base_prompt 後面。
+
+    character_ids 為空、或全部找不到對應角色時，原封不動回傳 base_prompt，
+    確保沒有 characters 欄位的舊 scene 行為完全不變。
+    """
+    if not character_ids:
+        return base_prompt
+
+    character_manager = manager or CharacterManager()
+    fragments = [character_manager.get_visual_prompt(cid) for cid in character_ids]
+    fragments = [fragment for fragment in fragments if fragment]
+
+    if not fragments:
+        return base_prompt
+
+    return base_prompt + ", " + ", ".join(fragments)
