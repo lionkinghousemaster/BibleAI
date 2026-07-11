@@ -1,0 +1,18 @@
+{
+  "id": "eve",
+  "name_zh": "夏娃",
+  "name_en": "Eve",
+  "role": "主要角色",
+  "description_zh": "神為亞當所造的伴侶，人類的母親。",
+  "description_en": "The companion God made for Adam, the mother of humankind.",
+  "visual_prompt": "a gentle young woman with long dark wavy hair, warm tan skin tone, kind smile, simple modest dress made of soft leaves or plain fabric, children's storybook illustration style",
+  "appearance_notes": "服裝簡樸、符合兒童內容分級，各 scene 維持相同髮型、膚色與服裝樣式以確保角色一致性",
+  "color_palette": ["#8B5A2B", "#DEB887", "#A0522D"],
+  "voice": {
+    "provider": "edge-tts",
+    "voice_id": "narrator_female",
+    "emotion": "warm",
+    "style": "story"
+  },
+  "tags": ["human", "genesis", "main-character"]
+}

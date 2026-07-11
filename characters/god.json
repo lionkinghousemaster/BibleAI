@@ -1,0 +1,18 @@
+{
+  "id": "god",
+  "name_zh": "神",
+  "name_en": "God",
+  "role": "主要角色",
+  "description_zh": "創造天地萬物的神，創世記中的核心角色。",
+  "description_en": "The Creator of heaven and earth, the central figure of Genesis.",
+  "visual_prompt": "radiant warm golden light, gentle glowing presence, no depicted human face or body, soft rays of light, children's storybook illustration style, warm and comforting",
+  "appearance_notes": "以光與溫暖光暈表現神的臨在，不描繪具體人形樣貌，各 scene 維持一致的金黃色調",
+  "color_palette": ["#FFD700", "#FFF3B0", "#FFFDE7"],
+  "voice": {
+    "provider": "edge-tts",
+    "voice_id": "narrator_male",
+    "emotion": "warm",
+    "style": "story"
+  },
+  "tags": ["divine", "light", "creator"]
+}

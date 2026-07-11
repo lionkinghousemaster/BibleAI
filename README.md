@@ -3,7 +3,7 @@
 ## 資料夾結構
 
 - `stories/`：每一集的故事腳本（JSON），包含各 scene 的旁白、字幕與 prompt
-- `characters/`：角色設定（尚未使用）
+- `characters/`：角色設定 JSON（見下方 Character System，目前尚未接入任何 pipeline）
 - `prompts/`：保留資料夾（尚未使用）
 - `output/`
   - `image_prompts/`：由 `main.py` 從 story JSON 匯出的每個 scene 的 image_prompt（scene001.txt、scene002.txt...）
@@ -46,3 +46,38 @@ subtitles/scene{N}.srt ┘
 ```
 
 每個 scene 產生 mp4 之後，下一階段會再把所有 scene 的 mp4 串接成完整集數影片；這部分也還沒規劃實作細節，目前僅先建立 Provider 架構。
+
+## Character System
+
+- `character_manager.py`：角色管理模組（v0.2 第一個功能），**目前是完全獨立的架構，尚未被 `generate_image.py`、`main.py` 或任何既有 pipeline 引用**
+  - `CharacterProvider`：抽象介面，定義 `load_all() -> dict`、`get(character_id) -> dict | None`
+  - `JSONCharacterProvider`：從 `characters/*.json` 讀取角色設定，一個角色一個檔案，檔名即 `character_id`
+  - `CharacterManager`：包裝 Provider 的存取入口，提供 `get_character()`、`list_characters()`、`get_visual_prompt()`
+- `characters/`：角色設定 JSON 檔案，目前已建立四個範例：`god.json`、`adam.json`、`eve.json`、`serpent.json`
+
+### 角色 JSON 格式
+
+```json
+{
+  "id": "adam",
+  "name_zh": "亞當",
+  "name_en": "Adam",
+  "role": "主要角色",
+  "description_zh": "神照自己的樣式所造的第一個人。",
+  "description_en": "The first man, made by God in His own image.",
+  "visual_prompt": "給 AI 圖像生成用的角色視覺描述片段",
+  "appearance_notes": "維持角色一致性的補充說明（服裝、髮型、配色等）",
+  "color_palette": ["#8B5A2B", "#DEB887"],
+  "voice": {
+    "provider": "edge-tts",
+    "voice_id": "narrator_male",
+    "emotion": "warm",
+    "style": "story"
+  },
+  "tags": ["human", "genesis"]
+}
+```
+
+### 未來規劃：ComfyUI prompt 如何引用角色（尚未實作）
+
+規劃方向是讓 `generate_image.py` 在組 scene 的 `image_prompt` 時，透過 `CharacterManager.get_visual_prompt(character_id)` 取得該角色固定的視覺描述片段，拼接進該 scene 自己的 `image_prompt`，確保同一角色在不同 scene、不同集數之間的長相、服裝、配色維持一致，不會每次生成都長得不一樣。這是下一步的整合工作，這次只先把資料結構與存取介面立好，沒有動到任何現有的生成流程。

@@ -1,0 +1,18 @@
+{
+  "id": "serpent",
+  "name_zh": "蛇",
+  "name_en": "Serpent",
+  "role": "反派角色",
+  "description_zh": "在伊甸園中引誘夏娃的狡猾蛇。",
+  "description_en": "The cunning serpent that tempts Eve in the Garden of Eden.",
+  "visual_prompt": "a stylized friendly-looking cartoon snake with green and gold scales, large expressive eyes, curled gracefully around a tree branch, children's storybook illustration style, not scary or grotesque",
+  "appearance_notes": "維持溫和童書風格，避免恐怖/嚇人元素，符合兒童內容分級；各 scene 維持相同配色與花紋",
+  "color_palette": ["#2E8B57", "#DAA520", "#556B2F"],
+  "voice": {
+    "provider": "edge-tts",
+    "voice_id": "narrator_male",
+    "emotion": "mysterious",
+    "style": "story"
+  },
+  "tags": ["animal", "antagonist", "genesis"]
+}
