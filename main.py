@@ -1,7 +1,8 @@
 import json
 from pathlib import Path
 
-from generate_image import ComfyUIProvider, DummyProvider, generate_image_from_prompt
+from character_manager import CharacterManager
+from generate_image import ComfyUIProvider, DummyProvider, build_character_aware_prompt, generate_image_from_prompt
 from generate_voice import get_provider as get_voice_provider
 
 STORY_PATH = Path(__file__).parent / "stories" / "Genesis_001.json"
@@ -42,14 +43,18 @@ def export_image_prompts(story):
 
 def generate_images(story):
     provider = get_provider()
+    character_manager = CharacterManager()
 
     count = 0
     for scene in story.get("scenes", []):
         scene_number = scene.get("scene_number")
         image_prompt = scene.get("image_prompt", "")
+        characters = scene.get("characters", [])
+
+        final_prompt = build_character_aware_prompt(image_prompt, characters, character_manager)
 
         output_path = IMAGES_DIR / f"scene{scene_number:03d}.png"
-        generate_image_from_prompt(image_prompt, str(output_path), provider=provider)
+        generate_image_from_prompt(final_prompt, str(output_path), provider=provider)
         count += 1
 
     return count
