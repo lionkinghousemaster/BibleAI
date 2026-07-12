@@ -1,0 +1,20 @@
+{
+  "categories": {
+    "lighting": {
+      "weight": 3,
+      "default_preset": "default"
+    },
+    "composition": {
+      "weight": 2,
+      "default_preset": "default"
+    },
+    "style": {
+      "weight": 1,
+      "default_preset": "default"
+    },
+    "negative": {
+      "weight": 1,
+      "default_preset": "default"
+    }
+  }
+}
