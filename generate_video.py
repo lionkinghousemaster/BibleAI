@@ -2,6 +2,8 @@ import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from camera_manager import CameraManager
+
 # Video Pipeline 規劃中的資料流向（尚未實作）：
 #
 #   images/scene{N}.png ─┐
@@ -20,6 +22,7 @@ class VideoProvider(ABC):
         audio_path: Path,
         subtitle_path: Path,
         output_path: Path,
+        camera_id: str = None,
     ) -> Path:
         ...
 
@@ -27,19 +30,28 @@ class VideoProvider(ABC):
 class DummyVideoProvider(VideoProvider):
     """假影片合成器：建立同名 .txt 檔案代表影片合成成功，不產生真正的影片。"""
 
+    def __init__(self, camera_manager: CameraManager = None):
+        self.camera_manager = camera_manager or CameraManager()
+
     def generate(
         self,
         image_path: Path,
         audio_path: Path,
         subtitle_path: Path,
         output_path: Path,
+        camera_id: str = None,
     ) -> Path:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
+        camera_filter = self.camera_manager.get_filter(camera_id) if camera_id else ""
+
         txt_path = output_path.with_suffix(".txt")
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write(f"image: {image_path}\naudio: {audio_path}\nsubtitle: {subtitle_path}\n")
+            f.write(
+                f"image: {image_path}\naudio: {audio_path}\nsubtitle: {subtitle_path}\n"
+                f"camera_id: {camera_id}\ncamera_filter: {camera_filter}\n"
+            )
 
         return output_path
 
@@ -55,9 +67,10 @@ class FFmpegVideoProvider(VideoProvider):
     WIDTH = 1920
     HEIGHT = 1080
 
-    def __init__(self, ffmpeg_path: str = "ffmpeg", ffprobe_path: str = "ffprobe"):
+    def __init__(self, ffmpeg_path: str = "ffmpeg", ffprobe_path: str = "ffprobe", camera_manager: CameraManager = None):
         self.ffmpeg_path = ffmpeg_path
         self.ffprobe_path = ffprobe_path
+        self.camera_manager = camera_manager or CameraManager()
 
     @staticmethod
     def _escape_subtitles_path(path: Path) -> str:
@@ -89,6 +102,7 @@ class FFmpegVideoProvider(VideoProvider):
         audio_path: Path,
         subtitle_path: Path,
         output_path: Path,
+        camera_id: str = None,
     ) -> Path:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -100,11 +114,16 @@ class FFmpegVideoProvider(VideoProvider):
         audio_duration = self._get_audio_duration(audio_path)
 
         subtitles_arg = self._escape_subtitles_path(subtitle_path)
-        video_filter = (
-            f"scale={self.WIDTH}:{self.HEIGHT}:force_original_aspect_ratio=decrease,"
-            f"pad={self.WIDTH}:{self.HEIGHT}:(ow-iw)/2:(oh-ih)/2,"
-            f"subtitles='{subtitles_arg}'"
-        )
+
+        camera_filter = self.camera_manager.get_filter(camera_id) if camera_id else ""
+
+        filter_stages = []
+        if camera_filter:
+            filter_stages.append(camera_filter)
+        filter_stages.append(f"scale={self.WIDTH}:{self.HEIGHT}:force_original_aspect_ratio=decrease")
+        filter_stages.append(f"pad={self.WIDTH}:{self.HEIGHT}:(ow-iw)/2:(oh-ih)/2")
+        filter_stages.append(f"subtitles='{subtitles_arg}'")
+        video_filter = ",".join(filter_stages)
 
         command = [
             self.ffmpeg_path,
