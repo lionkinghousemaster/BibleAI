@@ -1,3 +1,0 @@
-image: output/images/scene001.png
-audio: output/audio/scene001.mp3
-subtitle: output/subtitles/scene001.srt
