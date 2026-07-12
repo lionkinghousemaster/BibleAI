@@ -8,6 +8,7 @@ from generate_subtitle import generate_subtitle_srt
 from generate_video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
 from generate_voice import DummyVoiceProvider, EdgeTTSProvider
 from prompt_builder import PromptBuilder
+from prompt_report import generate_prompt_report
 from story_scanner import StoryScanner
 
 RELEASE_DIR = Path(__file__).parent / "release"
@@ -123,6 +124,9 @@ def export_image_prompts(story_data: dict, paths: ReleasePaths, prompt_builder: 
         )
 
         count += 1
+
+    report_text = generate_prompt_report(story_data, prompt_builder)
+    (paths.image_prompts / "prompt_report.txt").write_text(report_text, encoding="utf-8")
 
     return count
 

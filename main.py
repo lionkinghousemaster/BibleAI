@@ -7,6 +7,7 @@ from generate_subtitle import generate_subtitle_srt
 from generate_video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
 from generate_voice import DummyVoiceProvider, EdgeTTSProvider
 from prompt_builder import PromptBuilder
+from prompt_report import generate_prompt_report
 
 STORY_PATH = Path(__file__).parent / "stories" / "Genesis_001.json"
 IMAGE_PROMPTS_DIR = Path(__file__).parent / "output" / "image_prompts"
@@ -82,6 +83,9 @@ def export_image_prompts(story):
                 f.write("\n".join(debug_log))
 
         count += 1
+
+    report_text = generate_prompt_report(story, prompt_builder)
+    (IMAGE_PROMPTS_DIR / "prompt_report.txt").write_text(report_text, encoding="utf-8")
 
     return count
 
