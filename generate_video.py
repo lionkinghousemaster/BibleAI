@@ -157,3 +157,61 @@ def get_provider() -> VideoProvider:
     if ACTIVE_PROVIDER == "dummy":
         return DummyVideoProvider()
     raise ValueError(f"未知的 ACTIVE_PROVIDER: {ACTIVE_PROVIDER}")
+
+
+def get_episode_video_paths(story: dict, videos_dir: Path) -> list:
+    """依 story['scenes'] 目前的順序與數量，組出每個 scene 對應的 mp4 路徑清單。
+
+    完全依 story 內容決定 scene 數量與順序，不寫死任何數字；找不到某個
+    scene 的 mp4 會直接丟出例外，而不是靜默跳過，避免串出一集缺片段的影片。
+    """
+    videos_dir = Path(videos_dir)
+    video_paths = []
+    for scene in story.get("scenes", []):
+        scene_number = scene.get("scene_number")
+        video_path = videos_dir / f"scene{scene_number:03d}.mp4"
+        if not video_path.exists():
+            raise FileNotFoundError(
+                f"找不到 scene{scene_number:03d}.mp4（{video_path}），"
+                "請先用 VideoProvider 產生所有 scene 的影片再串接。"
+            )
+        video_paths.append(video_path)
+    return video_paths
+
+
+def concatenate_episode(video_paths: list, output_path: Path, ffmpeg_path: str = "ffmpeg") -> Path:
+    """用 ffmpeg concat demuxer 把已排序好的 scene mp4 清單無損串接成整集影片。
+
+    scene mp4 都是用同一個 FFmpegVideoProvider 產生（相同解析度/編碼），
+    串接採 `-c copy` 直接複製串流，不重新編碼，音訊與字幕（已燒錄進畫面）
+    維持原樣、不中斷。
+    """
+    if not video_paths:
+        raise ValueError("video_paths 不可為空，至少需要一個 scene 影片才能串接")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    concat_list_path = output_path.parent / f"{output_path.stem}_concat_list.txt"
+    with open(concat_list_path, "w", encoding="utf-8") as f:
+        for video_path in video_paths:
+            escaped = str(Path(video_path).resolve()).replace("\\", "/").replace("'", "'\\''")
+            f.write(f"file '{escaped}'\n")
+
+    command = [
+        ffmpeg_path,
+        "-y",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", str(concat_list_path),
+        "-c", "copy",
+        str(output_path),
+    ]
+
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"FFmpeg 串接失敗（exit code {result.returncode}）：\n{result.stderr}"
+        )
+
+    return output_path
