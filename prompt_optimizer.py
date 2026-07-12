@@ -1,6 +1,6 @@
 class PromptOptimizer:
-    """對 PromptBuilder 組出來的分層 prompt 做兩件事：去除重複片語、在超出
-    token 預算時裁剪低優先級分類。
+    """對 PromptBuilder 組出來的分層 prompt 做兩件事：去除重複片語、依
+    Priority 建立 Token Budget 並依此裁剪超出預算的分類。
 
     設計刻意保持單純：
     - 「token」用空白斷詞數近似（沒有引入額外的 CLIP/BPE tokenizer 相依套件），
@@ -9,14 +9,26 @@ class PromptOptimizer:
     - 去重以逗號分隔的片語為單位，保留每個片語第一次出現的位置，維持
       呼叫端傳入的分類順序（例如 Character > Environment > Lighting >
       Composition > Style）。
-    - 裁剪永遠不會處理 protected 分類（呼叫端指定，通常是 character 與
-      environment），其餘分類依照呼叫端提供的優先順序，從最低優先開始，
-      一個片語一個片語地從尾端裁掉，直到符合預算或該分類裁光為止。
+    - Priority／Token Budget：Character、Environment 是保護分類，一律
+      不限制、不裁剪。其餘分類（預設 Lighting > Composition > Style）
+      依 category_weights 的權重，把「扣掉保護分類之後剩下的預算」用
+      瀑布式比例分配給每個分類——權重高的分類先按比例取得份額，若它本身
+      不需要那麼多（內容較短），沒用完的預算會留給後面權重較低的分類，
+      而不是被浪費掉。分配好預算後，每個分類各自裁到符合「自己的預算」，
+      而不是像過去那樣不斷從某個分類尾端裁到「全域總長度」符合為止。
     """
 
-    def __init__(self, max_positive_tokens: int = 77, max_negative_tokens: int = 77):
+    DEFAULT_CATEGORY_WEIGHTS = {"lighting": 3, "composition": 2, "style": 1}
+
+    def __init__(
+        self,
+        max_positive_tokens: int = 77,
+        max_negative_tokens: int = 77,
+        category_weights: dict = None,
+    ):
         self.max_positive_tokens = max_positive_tokens
         self.max_negative_tokens = max_negative_tokens
+        self.category_weights = dict(category_weights) if category_weights else dict(self.DEFAULT_CATEGORY_WEIGHTS)
 
     @staticmethod
     def estimate_tokens(text: str) -> int:
@@ -54,9 +66,48 @@ class PromptOptimizer:
 
         return result, log
 
+    def allocate_budget(self, ordered_sections: list, protected: set, total_budget: int) -> dict:
+        """依優先順序（ordered_sections 的順序）與 category_weights，把
+        total_budget 分配給每個分類。protected 分類回傳 None（不限制，
+        但仍會從總預算中扣掉它們實際佔用的 tokens）。
+
+        瀑布式分配：可裁剪分類依序處理，每個分類先算出「剩餘預算 × 自己
+        權重 / 剩餘分類權重總和」的理論份額，實際分配則取
+        min(自己的原始長度, 理論份額)——如果這個分類本身不需要那麼多，
+        沒花完的預算會繼續留在池子裡，讓後面權重較低的分類也有機會
+        分到比純比例計算更多的預算。
+        """
+        budgets = {}
+        remaining = total_budget
+
+        for category, text in ordered_sections:
+            if category in protected:
+                budgets[category] = None
+                remaining -= self.estimate_tokens(text)
+
+        remaining = max(0, remaining)
+
+        trimmable = [(category, text) for category, text in ordered_sections if category not in protected]
+
+        for index, (category, text) in enumerate(trimmable):
+            weight = self.category_weights.get(category, 1)
+            remaining_weight = sum(self.category_weights.get(c, 1) for c, _ in trimmable[index:])
+            share = round(remaining * weight / remaining_weight) if remaining_weight else 0
+            natural = self.estimate_tokens(text)
+            allocated = min(natural, share)
+            budgets[category] = allocated
+            remaining -= allocated
+
+        return budgets
+
     def enforce_length_budget(self, ordered_sections: list, protected: set, max_tokens: int) -> tuple:
-        """超過 max_tokens 時，依 ordered_sections 由後到前的順序裁剪
-        非 protected 分類（也就是排在越後面、優先級越低的分類越先被裁）。
+        """超過 max_tokens 時，依 Priority 建立的 Token Budget 裁剪各分類。
+
+        流程：(1) 用 allocate_budget() 依優先順序算出每個非 protected 分類
+        各自被分配到多少 token；(2) 每個分類各自裁到符合自己的預算——
+        分類內部仍是從尾端裁起（沒有片語重要性模型可判斷該留哪一句），
+        但「該裁到剩多少」是由分配好的預算決定，不是不斷從某個分類尾端
+        砍到全域總長度符合為止。
         """
         log = []
         sections = dict(ordered_sections)
@@ -69,24 +120,30 @@ class PromptOptimizer:
         if total_tokens <= max_tokens:
             return ordered_sections, log
 
-        log.append(f"[trim] Prompt 預估 {total_tokens} tokens，超過上限 {max_tokens}，開始依優先順序裁剪")
+        budgets = self.allocate_budget(ordered_sections, protected, max_tokens)
 
-        trimmable_categories = [category for category in reversed(order) if category not in protected]
+        log.append(f"[budget] Prompt 預估 {total_tokens} tokens，超過上限 {max_tokens}，依優先順序分配 token 預算：")
+        for category in order:
+            if category in protected:
+                log.append(f"[budget]   {category}: 保護分類，不限制（不裁剪）")
+            else:
+                original = self.estimate_tokens(sections.get(category, ""))
+                log.append(f"[budget]   {category}: 分配 {budgets.get(category, 0)} tokens（原本 {original} tokens）")
 
-        for category in trimmable_categories:
+        for category in order:
+            if category in protected:
+                continue
+            allocated = budgets.get(category, 0)
             phrases = self._split_phrases(sections.get(category, ""))
-            while phrases and self.estimate_tokens(joined_text()) > max_tokens:
+            while phrases and self.estimate_tokens(", ".join(phrases)) > allocated:
                 dropped = phrases.pop()
-                sections[category] = ", ".join(phrases)
-                log.append(f"[trim] 裁剪 {category} 分類最後一個片語：\"{dropped}\"")
-
-            if self.estimate_tokens(joined_text()) <= max_tokens:
-                break
+                log.append(f"[trim] 裁剪 {category} 分類最後一個片語：\"{dropped}\"（超出分配的 {allocated} tokens 預算）")
+            sections[category] = ", ".join(phrases)
 
         final_tokens = self.estimate_tokens(joined_text())
         if final_tokens > max_tokens:
             log.append(
-                f"[trim] 裁完所有可裁剪分類後仍有 {final_tokens} tokens（上限 {max_tokens}）。"
+                f"[budget] 依預算裁剪完後仍有 {final_tokens} tokens（上限 {max_tokens}）。"
                 "Character／Environment 為保護分類、不會被裁剪，這是目前已知的上限，"
                 "需要縮短故事原文或角色描述才能進一步改善。"
             )

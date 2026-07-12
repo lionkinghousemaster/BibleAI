@@ -57,9 +57,10 @@ class PromptBuilder:
     負向 prompt 獨立一層，來自 prompts/negative/*.json。
 
     組好的分層在回傳前會先經過 PromptOptimizer：先去除跨分類重複的片語，
-    再視需要裁剪 token 預算內放不下的內容——Character／Environment 是保護
-    分類、永遠不會被裁剪，只會裁 Lighting／Composition／Style（依此由低到高
-    優先順序裁剪）。
+    再視需要依 Priority 分配 Token Budget、裁剪超出各自預算的內容——
+    Character／Environment 是保護分類、永遠不限制／不裁剪，Lighting／
+    Composition／Style 依權重（預設 3:2:1）分配剩餘預算，權重越高的分類
+    budget 不足時流失得越少。
 
     設計風格與 CharacterManager / CameraManager 一致：任何一層模板找不到（分類
     資料夾不存在、preset id 找不到對應檔案）都只會讓那一層變成空字串並被跳過，
@@ -137,3 +138,41 @@ class PromptBuilder:
     def build_negative_prompt(self, scene: dict = None) -> str:
         final_negative, _debug_log = self.build_negative_prompt_with_debug(scene)
         return final_negative
+
+    def build_prompt_report_entry(self, scene: dict) -> dict:
+        """回傳這個 scene 的 Prompt Engine 報告資料：各模組（去重/裁剪前的
+        原始內容）的字元數與 token 數、最終正向/負向 prompt 的字元數與
+        token 數，以及去重／裁剪的完整 debug log，供 prompt_report.py
+        產生人工可讀的 prompt_report.txt。
+        """
+        character_prompt = self.build_character_prompt(scene.get("characters", []))
+        environment_prompt = scene.get("image_prompt", "")
+        lighting_prompt = self._get_template_text("lighting", scene.get("lighting", "default"))
+        composition_prompt = self._get_template_text("composition", scene.get("composition", "default"))
+        style_prompt = self._get_template_text("style", scene.get("style", "default"))
+
+        positive_prompt, positive_log = self.build_positive_prompt_with_debug(scene)
+        negative_prompt, negative_log = self.build_negative_prompt_with_debug(scene)
+
+        modules_raw = {
+            "character": character_prompt,
+            "environment": environment_prompt,
+            "lighting": lighting_prompt,
+            "composition": composition_prompt,
+            "style": style_prompt,
+            "negative": negative_prompt,
+        }
+        module_stats = {
+            category: {"chars": len(text), "tokens": self.optimizer.estimate_tokens(text)}
+            for category, text in modules_raw.items()
+        }
+
+        return {
+            "scene_number": scene.get("scene_number"),
+            "module_stats": module_stats,
+            "final_positive_chars": len(positive_prompt),
+            "final_positive_tokens": self.optimizer.estimate_tokens(positive_prompt),
+            "final_negative_chars": len(negative_prompt),
+            "final_negative_tokens": self.optimizer.estimate_tokens(negative_prompt),
+            "debug_log": positive_log + negative_log,
+        }
