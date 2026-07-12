@@ -2,10 +2,11 @@ import json
 from pathlib import Path
 
 from character_manager import CharacterManager
-from generate_image import ComfyUIProvider, DummyProvider, build_character_aware_prompt, generate_image_from_prompt
+from generate_image import ComfyUIProvider, DummyProvider, generate_scene_image
 from generate_subtitle import generate_subtitle_srt
 from generate_video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
 from generate_voice import DummyVoiceProvider, EdgeTTSProvider
+from prompt_builder import PromptBuilder
 
 STORY_PATH = Path(__file__).parent / "stories" / "Genesis_001.json"
 IMAGE_PROMPTS_DIR = Path(__file__).parent / "output" / "image_prompts"
@@ -28,6 +29,7 @@ def get_provider():
             positive_prompt_node_id="2",
             save_image_node_id="7",
             seed_node_id="5",
+            negative_prompt_node_id="3",
         )
     return DummyProvider()
 
@@ -46,6 +48,7 @@ def get_video_provider():
 
 def export_image_prompts(story):
     IMAGE_PROMPTS_DIR.mkdir(parents=True, exist_ok=True)
+    prompt_builder = PromptBuilder(character_manager=CharacterManager())
 
     count = 0
     for scene in story.get("scenes", []):
@@ -55,6 +58,29 @@ def export_image_prompts(story):
         file_path = IMAGE_PROMPTS_DIR / f"scene{scene_number:03d}.txt"
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(image_prompt)
+
+        positive_prompt, positive_log = prompt_builder.build_positive_prompt_with_debug(scene)
+        negative_prompt, negative_log = prompt_builder.build_negative_prompt_with_debug(scene)
+
+        positive_path = IMAGE_PROMPTS_DIR / f"scene{scene_number:03d}_positive_prompt.txt"
+        with open(positive_path, "w", encoding="utf-8") as f:
+            f.write(positive_prompt)
+
+        negative_path = IMAGE_PROMPTS_DIR / f"scene{scene_number:03d}_negative_prompt.txt"
+        with open(negative_path, "w", encoding="utf-8") as f:
+            f.write(negative_prompt)
+
+        final_path = IMAGE_PROMPTS_DIR / f"scene{scene_number:03d}_final_prompt.txt"
+        with open(final_path, "w", encoding="utf-8") as f:
+            f.write("[POSITIVE]\n")
+            f.write(positive_prompt)
+            f.write("\n\n[NEGATIVE]\n")
+            f.write(negative_prompt)
+            debug_log = positive_log + negative_log
+            if debug_log:
+                f.write("\n\n[DEBUG LOG]\n")
+                f.write("\n".join(debug_log))
+
         count += 1
 
     return count
@@ -62,18 +88,14 @@ def export_image_prompts(story):
 
 def generate_images(story):
     provider = get_provider()
-    character_manager = CharacterManager()
+    prompt_builder = PromptBuilder(character_manager=CharacterManager())
 
     count = 0
     for scene in story.get("scenes", []):
         scene_number = scene.get("scene_number")
-        image_prompt = scene.get("image_prompt", "")
-        characters = scene.get("characters", [])
-
-        final_prompt = build_character_aware_prompt(image_prompt, characters, character_manager)
 
         output_path = IMAGES_DIR / f"scene{scene_number:03d}.png"
-        generate_image_from_prompt(final_prompt, str(output_path), provider=provider)
+        generate_scene_image(scene, str(output_path), provider=provider, prompt_builder=prompt_builder)
         count += 1
 
     return count

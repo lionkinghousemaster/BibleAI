@@ -148,7 +148,13 @@ def generate_image_from_prompt(
     provider: ImageProvider = None,
     negative_prompt: str = "",
 ) -> None:
-    (provider or DEFAULT_PROVIDER).generate(prompt, output_path, negative_prompt=negative_prompt)
+    active_provider = provider or DEFAULT_PROVIDER
+    try:
+        active_provider.generate(prompt, output_path, negative_prompt=negative_prompt)
+    except TypeError:
+        # 向下相容：Provider 若是舊介面（generate 只接受 prompt/output_path，
+        # 不支援 negative_prompt 關鍵字參數），退回不帶負向 prompt 的呼叫方式。
+        active_provider.generate(prompt, output_path)
 
 
 def build_character_aware_prompt(
