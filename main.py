@@ -3,15 +3,22 @@ from pathlib import Path
 
 from character_manager import CharacterManager
 from generate_image import ComfyUIProvider, DummyProvider, build_character_aware_prompt, generate_image_from_prompt
-from generate_voice import get_provider as get_voice_provider
+from generate_subtitle import generate_subtitle_srt
+from generate_video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
+from generate_voice import DummyVoiceProvider, EdgeTTSProvider
 
 STORY_PATH = Path(__file__).parent / "stories" / "Genesis_001.json"
 IMAGE_PROMPTS_DIR = Path(__file__).parent / "output" / "image_prompts"
 IMAGES_DIR = Path(__file__).parent / "output" / "images"
 AUDIO_DIR = Path(__file__).parent / "output" / "audio"
+SUBTITLES_DIR = Path(__file__).parent / "output" / "subtitles"
+VIDEOS_DIR = Path(__file__).parent / "output" / "videos"
 WORKFLOW_PATH = Path(__file__).parent / "workflows" / "flux_schnell_basic.json"
+EPISODE_OUTPUT_PATH = VIDEOS_DIR / "Genesis_EP01.mp4"
 
-ACTIVE_PROVIDER = "comfyui"  # "comfyui" 或 "dummy"
+ACTIVE_PROVIDER = "comfyui"  # "comfyui" 或 "dummy"（圖片）
+ACTIVE_VOICE_PROVIDER = "edge-tts"  # "edge-tts" 或 "dummy"（配音）
+ACTIVE_VIDEO_PROVIDER = "ffmpeg"  # "ffmpeg" 或 "dummy"（影片合成）
 
 
 def get_provider():
@@ -23,6 +30,18 @@ def get_provider():
             seed_node_id="5",
         )
     return DummyProvider()
+
+
+def get_voice_provider():
+    if ACTIVE_VOICE_PROVIDER == "edge-tts":
+        return EdgeTTSProvider()
+    return DummyVoiceProvider()
+
+
+def get_video_provider():
+    if ACTIVE_VIDEO_PROVIDER == "ffmpeg":
+        return FFmpegVideoProvider()
+    return DummyVideoProvider()
 
 
 def export_image_prompts(story):
@@ -68,11 +87,49 @@ def export_voice(story):
         scene_number = scene.get("scene_number")
         narration = scene.get("narration_zh", "")
 
-        output_path = AUDIO_DIR / f"scene{scene_number:03d}.wav"
+        output_path = AUDIO_DIR / f"scene{scene_number:03d}.mp3"
         provider.generate(narration, output_path, language="zh-TW")
         count += 1
 
     return count
+
+
+def export_subtitles(story):
+    count = 0
+    for scene in story.get("scenes", []):
+        scene_number = scene.get("scene_number")
+        narration = scene.get("narration_zh", "")
+
+        audio_path = AUDIO_DIR / f"scene{scene_number:03d}.mp3"
+        output_path = SUBTITLES_DIR / f"scene{scene_number:03d}.srt"
+        generate_subtitle_srt(narration, audio_path, output_path)
+        count += 1
+
+    return count
+
+
+def generate_videos(story):
+    provider = get_video_provider()
+
+    count = 0
+    for scene in story.get("scenes", []):
+        scene_number = scene.get("scene_number")
+        camera_id = scene.get("camera")
+
+        image_path = IMAGES_DIR / f"scene{scene_number:03d}.png"
+        audio_path = AUDIO_DIR / f"scene{scene_number:03d}.mp3"
+        subtitle_path = SUBTITLES_DIR / f"scene{scene_number:03d}.srt"
+        output_path = VIDEOS_DIR / f"scene{scene_number:03d}.mp4"
+
+        provider.generate(image_path, audio_path, subtitle_path, output_path, camera_id=camera_id)
+        count += 1
+
+    return count
+
+
+def generate_episode_video(story):
+    video_paths = get_episode_video_paths(story, VIDEOS_DIR)
+    return concatenate_episode(video_paths, EPISODE_OUTPUT_PATH)
 
 
 def main():
@@ -94,6 +151,18 @@ def main():
 
     voice_count = export_voice(story)
     print(f"已產生 {voice_count} 個語音檔到 {AUDIO_DIR}")
+
+    subtitle_count = export_subtitles(story)
+    print(f"已產生 {subtitle_count} 個字幕檔到 {SUBTITLES_DIR}")
+
+    try:
+        video_count = generate_videos(story)
+        print(f"已產生 {video_count} 個 scene 影片到 {VIDEOS_DIR}")
+
+        episode_path = generate_episode_video(story)
+        print(f"已串接完整集數影片：{episode_path}")
+    except Exception as e:
+        print(f"影片產生失敗（不影響已完成的圖片／配音／字幕）：{e}")
 
 
 if __name__ == "__main__":
