@@ -1,0 +1,6 @@
+{
+  "id": "default",
+  "category": "style",
+  "prompt": "children's storybook illustration, soft watercolor texture, gentle painterly rendering, warm inviting color palette, 2D flat illustration for kids",
+  "description": "全系列統一使用的繪本風格。取代過去每個 scene 的 image_prompt 與每個角色的 visual_prompt 各自重複描寫風格字詞的做法，改成集中管理，未來只要改這一份檔案就能一次調整整季風格。"
+}

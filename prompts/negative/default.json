@@ -1,0 +1,6 @@
+{
+  "id": "default",
+  "category": "negative",
+  "prompt": "scary, violent, dark horror themes, weapons, blood, nudity, disturbing imagery, deformed hands, extra limbs, extra fingers, missing limbs, mutated body, disfigured face, cross-eyed, blurry, out of focus, low quality, low resolution, jpeg artifacts, watermark, signature, text, logo, oversaturated, ugly, duplicate",
+  "description": "全系列共用的負向提示詞。避免恐怖／暴力／成人內容（不適合兒童向影片），以及常見 AI 生成瑕疵（多指、變形肢體、模糊、浮水印文字等）。此欄位先前完全未被使用——ComfyUI workflow 的負向 CLIPTextEncode 節點一直是空字串，這次是第一次真正接上負向提示詞。"
+}
