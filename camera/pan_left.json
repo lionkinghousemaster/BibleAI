@@ -1,0 +1,7 @@
+{
+  "id": "pan_left",
+  "filter": "zoompan=z='1.15':x='if(eq(on,1),iw-(iw/zoom),x-2)':y='ih/2-(ih/zoom/2)':d=125:s=1920x1080",
+  "description": "鏡頭在固定放大倍率下由右向左橫移。",
+  "type": "pan",
+  "direction": "left"
+}

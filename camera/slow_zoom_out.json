@@ -1,0 +1,7 @@
+{
+  "id": "slow_zoom_out",
+  "filter": "zoompan=z='if(eq(on,1),1.15,max(zoom-0.0015,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=125:s=1920x1080",
+  "description": "緩慢拉遠，適合場景開場時逐步揭示全貌。",
+  "type": "zoom",
+  "direction": "out"
+}

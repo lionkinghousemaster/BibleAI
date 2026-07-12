@@ -1,0 +1,7 @@
+{
+  "id": "static",
+  "filter": "",
+  "description": "無鏡頭運動，維持靜態畫面，等同目前 generate_video.py 的預設行為。",
+  "type": "static",
+  "direction": null
+}

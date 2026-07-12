@@ -1,0 +1,7 @@
+{
+  "id": "slow_zoom_in",
+  "filter": "zoompan=z='min(zoom+0.0015,1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=125:s=1920x1080",
+  "description": "緩慢推近，適合營造聚焦、靠近主體的氣氛。",
+  "type": "zoom",
+  "direction": "in"
+}
