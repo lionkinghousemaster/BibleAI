@@ -1,4 +1,4 @@
-from prompt_builder import PromptBuilder
+from .builder import PromptBuilder
 
 MODULE_ORDER = ["character", "environment", "lighting", "composition", "style", "negative"]
 

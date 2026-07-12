@@ -1,6 +1,7 @@
 from character_manager import CharacterManager
-from prompt_library import PromptLibrary
-from prompt_optimizer import PromptOptimizer
+
+from .library import PromptLibrary
+from .optimizer import PromptOptimizer
 
 
 class PromptBuilder:
@@ -103,8 +104,8 @@ class PromptBuilder:
         """回傳這個 scene 的 Prompt Engine 報告資料：各模組（去重/裁剪前的
         原始內容）的字元數、token 數、來源（preset 檔案路徑或 Manager
         名稱）與權重、最終正向/負向 prompt 的字元數與 token 數，以及
-        去重／裁剪的完整 debug log，供 prompt_report.py 產生人工可讀的
-        prompt_report.txt。
+        去重／裁剪的完整 debug log，供 engine/prompt/report.py 產生人工
+        可讀的 prompt_report.txt。
         """
         character_ids = scene.get("characters", []) or []
         character_prompt = self.build_character_prompt(character_ids)

@@ -24,6 +24,11 @@ class PromptLibrary:
 
     找不到 manifest、分類資料夾、或 preset 檔案時一律回傳空值／預設值，
     不丟例外，維持與 CharacterManager／CameraManager 一致的容錯風格。
+
+    `prompts/` 資料夾本身仍放在專案根目錄（跟 `characters/`／`camera/`
+    一樣是資料，不隨程式碼一起搬進 `engine/`），因此預設路徑往上推三層
+    （engine/prompt/library.py -> engine/prompt -> engine -> 專案根目錄）
+    才是 `prompts/`。
     """
 
     DEFAULT_MANIFEST = {
@@ -36,7 +41,7 @@ class PromptLibrary:
     }
 
     def __init__(self, prompts_dir: Path = None):
-        self.prompts_dir = Path(prompts_dir) if prompts_dir else Path(__file__).parent / "prompts"
+        self.prompts_dir = Path(prompts_dir) if prompts_dir else Path(__file__).parent.parent.parent / "prompts"
         self._manifest = self._load_manifest()
 
     def _load_manifest(self) -> dict:
