@@ -1,4 +1,4 @@
-from prompt_builder import PromptBuilder
+from engine.prompt import PromptBuilder
 
 
 def build_cover_scene(story_data: dict) -> dict:

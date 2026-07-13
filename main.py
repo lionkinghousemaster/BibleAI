@@ -2,12 +2,11 @@ import json
 from pathlib import Path
 
 from character_manager import CharacterManager
+from engine.prompt import PromptBuilder, generate_prompt_report
 from generate_image import ComfyUIProvider, DummyProvider, generate_scene_image
 from generate_subtitle import generate_subtitle_srt
 from generate_video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
 from generate_voice import DummyVoiceProvider, EdgeTTSProvider
-from prompt_builder import PromptBuilder
-from prompt_report import generate_prompt_report
 
 STORY_PATH = Path(__file__).parent / "stories" / "Genesis_001.json"
 IMAGE_PROMPTS_DIR = Path(__file__).parent / "output" / "image_prompts"

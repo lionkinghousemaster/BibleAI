@@ -3,12 +3,11 @@ from pathlib import Path
 
 from character_manager import CharacterManager
 from content_metadata import build_upload_payload, generate_cover_prompt, generate_youtube_metadata
+from engine.prompt import PromptBuilder, generate_prompt_report
 from generate_image import ComfyUIProvider, DummyProvider, generate_image_from_prompt, generate_scene_image
 from generate_subtitle import generate_subtitle_srt
 from generate_video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
 from generate_voice import DummyVoiceProvider, EdgeTTSProvider
-from prompt_builder import PromptBuilder
-from prompt_report import generate_prompt_report
 from story_scanner import StoryScanner
 
 RELEASE_DIR = Path(__file__).parent / "release"
