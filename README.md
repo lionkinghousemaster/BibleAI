@@ -60,6 +60,8 @@ BibleAI 是一個把聖經故事自動轉成兒童向動畫短片的內容工廠
 
 `main.py` 是另一條並行的手動入口，固定只處理 `stories/Genesis_001.json`，輸出到 `output/`（詳見第 5 節）；`batch_pipeline.py` 是可以一次處理 `stories/` 底下所有故事的正式流程，兩者共用同一套 Provider／Manager／Builder，互不影響。
 
+上圖最上方的 `stories/*.json` 除了人工撰寫，v0.9 起也可以用 `engine.story` 的 `StoryGenerator` 依主題自動產生（見第 4、7 節）——產生的故事是完全相同的 JSON 結構，`batch_pipeline.py` 不需要知道這份故事是人工寫的還是自動生成的。
+
 ## 2. Pipeline 流程（Story → Release）
 
 以 `batch_pipeline.run_batch()` 為例，單一故事的完整流程：
@@ -93,7 +95,11 @@ BibleAI/
 │   │   ├── builder.py          PromptBuilder：組裝層
 │   │   ├── optimizer.py        PromptOptimizer：去重＋Token Budget 裁剪
 │   │   └── report.py           generate_prompt_report：prompt_report.txt
-│   ├── story/                  Story Engine（預留，尚未遷入 story_scanner.py）
+│   ├── story/                  Story Engine（本次 v0.9 新增 StoryGenerator）
+│   │   ├── generator.py        StoryGenerator：依主題組出 stories/*.json 格式的故事
+│   │   ├── llm_provider.py     LLMProvider：DummyLLMProvider（離線）／AnthropicProvider（Claude API）
+│   │   └── report.py           generate_story_report：story_report.txt
+│   │                           （story_scanner.py 掃描既有故事的邏輯尚未遷入，見第 9 節 Roadmap）
 │   ├── image/                  Image Engine（預留，尚未遷入 generate_image.py）
 │   ├── video/                  Video Engine（預留，尚未遷入 generate_video.py／camera_manager.py）
 │   └── publish/                Publish Engine（預留，尚未遷入 content_metadata.py／batch_pipeline.py）
@@ -101,6 +107,7 @@ BibleAI/
 ├── camera_manager.py         鏡頭運動管理模組
 ├── content_metadata.py       封面 Prompt／YouTube Metadata／Upload 欄位產生模組
 ├── story_scanner.py          掃描 stories/、解析故事 metadata
+├── generate_story.py         StoryGenerator 執行入口：產生新故事 JSON + story_report.txt
 ├── generate_image.py         圖片生成 Provider（ComfyUI／Dummy）
 ├── generate_voice.py         配音生成 Provider（EdgeTTS／Dummy）
 ├── generate_subtitle.py      字幕產生（純標準庫解析 MP3 時長）
@@ -111,7 +118,7 @@ BibleAI/
 └── release/                  batch_pipeline.py 的輸出（執行產物，.gitignore 排除，只留 .gitkeep）
 ```
 
-`engine/` 是 v0.8 開始建立的分層架構：對外只需要 `from engine.prompt import PromptBuilder, generate_prompt_report` 這樣的頂層 import，不需要知道內部檔案是 library.py／builder.py／optimizer.py／report.py 這樣拆的。目前只有 Prompt 相關模組遷入 `engine.prompt`；`engine.story`／`engine.image`／`engine.video`／`engine.publish` 是預留的資料夾骨架，之後的 Sprint 會逐步把對應的頂層檔案（`story_scanner.py`、`generate_image.py`、`generate_video.py`／`camera_manager.py`、`content_metadata.py`／`batch_pipeline.py`）遷入。`prompts/`（模板資料）與 `characters/`／`camera/` 一樣仍放在專案根目錄，不隨程式碼一起搬進 `engine/`。
+`engine/` 是 v0.8 開始建立的分層架構：對外只需要 `from engine.prompt import PromptBuilder, generate_prompt_report` 這樣的頂層 import，不需要知道內部檔案是 library.py／builder.py／optimizer.py／report.py 這樣拆的。`engine.story` 從 v0.9 起也是同樣的入口風格：`from engine.story import StoryGenerator, DummyLLMProvider, AnthropicProvider, generate_story_report`。目前 `engine.prompt`／`engine.story` 已有實際模組；`engine.image`／`engine.video`／`engine.publish` 仍是預留的資料夾骨架，`story_scanner.py` 掃描既有故事的邏輯也還沒遷入 `engine.story`——之後的 Sprint 會逐步把這些頂層檔案（`story_scanner.py`、`generate_image.py`、`generate_video.py`／`camera_manager.py`、`content_metadata.py`／`batch_pipeline.py`）遷入。`prompts/`（模板資料）與 `characters/`／`camera/` 一樣仍放在專案根目錄，不隨程式碼一起搬進 `engine/`。
 
 ## 4. 核心模組角色
 
@@ -128,6 +135,12 @@ BibleAI/
 - **`generate_prompt_report`**（`engine/prompt/report.py`）：產生整部作品的 `prompt_report.txt`，逐 scene 列出每個模組的字元數、token 數、來源（preset 檔案路徑或 Manager 名稱）與權重，以及完整的去重／裁剪 debug log。
 
 以上四個模組對外都從 `engine.prompt` 這一個入口 import（`from engine.prompt import PromptBuilder, PromptLibrary, PromptOptimizer, generate_prompt_report`），呼叫端不需要知道內部檔案是怎麼拆的。
+
+- **StoryGenerator**（`engine/story/generator.py`，v0.9 新增）：依主題自動產生符合 `stories/*.json` 格式的故事。本身不生成敘事內容——把 `CharacterManager`／`CameraManager`／`PromptLibrary` 目前有哪些可用的角色、鏡頭運動、lighting/composition/style preset id 組成 context 交給注入的 `LLMProvider`，再驗證回傳的每個 scene（不存在的 character/camera/preset id 一律回退成安全預設值、duration 轉成合法正整數、依序補上 `scene_number`），組成與 `stories/Genesis_001.json` 完全相同結構的故事 dict，可以直接存成 JSON 交給 `batch_pipeline.py` 處理。
+
+- **LLMProvider**（`engine/story/llm_provider.py`）：與 `ImageProvider`／`VoiceProvider`／`VideoProvider` 同一種抽象介面風格。`DummyLLMProvider` 離線、不需要 API 金鑰，依 context 提供的角色／鏡頭清單輪流組出可辨識的 placeholder 內容，用來驗證整條 pipeline；`AnthropicProvider` 呼叫 Claude API（`anthropic` 官方 SDK，預設 model `claude-opus-4-8`，需要 `ANTHROPIC_API_KEY`），透過 structured outputs（`output_config.format`）保證回傳的 JSON 直接符合 scene schema。
+
+- **`generate_story_report`**（`engine/story/report.py`）：產生 `story_report.txt`，逐 scene 列出角色／鏡頭／lighting／composition／style 的實際取值（省略欄位顯示 `(default)`，代表交由 `PromptLibrary` 的 manifest 預設值決定）與 narration／image_prompt／animation_prompt／subtitle 內容，方便在丟進 `batch_pipeline.py` 之前人工檢視生成內容是否合理。
 
 ## 5. Content Factory 與 Publishing Factory 流程
 
@@ -173,6 +186,22 @@ release/
 3. 若故事用到新角色，先在 `characters/` 新增對應的角色 JSON（`id` 需與 scene 的 `characters` 陣列所引用的 id 一致）。
 4. 不需要修改任何程式碼——`StoryScanner` 會自動掃到新檔案，`batch_pipeline.py` 下次執行就會一併處理。
 
+也可以不手寫 JSON，改用 `engine.story` 的 `StoryGenerator` 自動產生（v0.9 新增）：
+
+```python
+from engine.story import StoryGenerator, AnthropicProvider  # 或 DummyLLMProvider 離線測試
+
+generator = StoryGenerator(llm_provider=AnthropicProvider())  # 需要 ANTHROPIC_API_KEY
+story = generator.generate(
+    theme="該隱與亞伯的故事",
+    episode="EP03", book="創世記 (Genesis)", chapter="4",
+    title_zh="該隱與亞伯", title_en="Cain and Abel",
+    scene_count=8,
+)
+```
+
+`generate()` 回傳的 dict 可以直接 `json.dump` 存到 `stories/<story_id>.json`；`generate_story.py` 是現成的執行入口（預設用 `DummyLLMProvider`，把 `ACTIVE_LLM_PROVIDER` 改成 `"anthropic"` 並設定 `ANTHROPIC_API_KEY` 就會改叫真正的 Claude API），會同時輸出 `story_report.txt` 方便存檔前先人工檢查生成內容。若主題用到 `characters/` 裡沒有的角色，記得依上面第 3 步先補上角色 JSON，否則該角色只會被當成純文字敘述，缺少視覺一致性描述。
+
 ## 8. 如何重新生成一部作品
 
 - **整批處理 `stories/` 底下所有故事**（含新的一部）：
@@ -193,7 +222,10 @@ release/
 
 已完成（v0.7～v0.8）：Prompt Engine（去重、Priority Token Budget、prompt_report.txt）、PromptLibrary／PromptBuilder 解耦、`engine/prompt` 分層架構。
 
+已完成（v0.9）：Story Generator（`engine.story` 的 `StoryGenerator` + `LLMProvider`/`DummyLLMProvider`/`AnthropicProvider` + `generate_story_report`，見第 4、7 節）——依主題自動產生符合 `stories/*.json` 格式的故事，與既有 `batch_pipeline.py` 完全相容。
+
 - **v0.9 — 其餘 Engine 遷入**：把 `story_scanner.py`、`generate_image.py`、`generate_video.py`／`camera_manager.py`、`content_metadata.py`／`batch_pipeline.py` 依序遷入 `engine.story`／`engine.image`／`engine.video`／`engine.publish`，讓整個專案的頂層目錄只剩 `main.py`、`batch_pipeline.py` 這類入口腳本。
+- **v0.9 — Story Generator 品質驗證**：目前只用 `DummyLLMProvider` 跑過完整流程驗證 schema 相容性；`AnthropicProvider` 尚未接上真實 `ANTHROPIC_API_KEY` 實測過，需要實際跑一次並檢視 `story_report.txt`／`prompt_report.txt`，確認生成內容的敘事品質與 image_prompt 是否符合兒童向分級與角色一致性要求。
 - **v0.9 — 多集規模驗證**：目前只有 `Genesis_001` 一部作品跑過完整流程，需要實際新增第二、第三部作品，驗證 Content/Publishing Factory 在多故事規模下的穩定性與耗時。
 - **v0.9 — Prompt 資料清理**：把 `stories/*.json` 的 `image_prompt` 與 `characters/*.json` 的 `visual_prompt` 裡內嵌的風格字詞抽離，讓 `prompts/style/` 成為唯一風格來源，真正吃到 PromptOptimizer 去重帶來的 token 節省。
 - **v0.9 — Lighting/Composition 差異化**：目前所有 scene 都用 `default` preset，可以依 `animation_prompt` 或劇情語意，幫特定 scene 指定 `lighting`/`composition`（例如夜晚場景用 `night`、宏觀場景用 `wide_shot`）。
