@@ -11,10 +11,10 @@
    - 正向 prompt 節點（`CLIPTextEncode`）的節點編號
    - 輸出節點（`SaveImage`）的節點編號
    - （選用）seed 節點編號，如果想每次生成都換一個隨機種子
-4. 用這三個編號建立 `ComfyUIProvider`（見 `generate_image.py`），例如：
+4. 用這三個編號建立 `ComfyUIProvider`（見 `engine/image/provider.py`），例如：
 
 ```python
-from generate_image import ComfyUIProvider, generate_image_from_prompt
+from engine.image import ComfyUIProvider, generate_image_from_prompt
 
 provider = ComfyUIProvider(
     workflow_path="workflows/flux_schnell_basic.json",

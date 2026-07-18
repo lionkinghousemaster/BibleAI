@@ -2,16 +2,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from camera_manager import CameraManager
-
-# Video Pipeline 規劃中的資料流向（尚未實作）：
-#
-#   images/scene{N}.png ─┐
-#   audio/scene{N}.mp3  ─┼─> FFmpeg（圖片+音訊+SRT 字幕燒錄）─> output/videos/scene{N}.mp4
-#   subtitles/scene{N}.srt ┘
-#
-# 之後每個 scene 的 mp4 還會再串接成完整集數影片，屬於下一階段規劃，這裡先不實作。
-# 目前只建立 Provider 架構與 Dummy 版本，驗證骨架可以正常呼叫。
+from .camera_manager import CameraManager
 
 
 class VideoProvider(ABC):

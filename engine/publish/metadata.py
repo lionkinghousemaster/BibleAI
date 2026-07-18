@@ -83,12 +83,10 @@ def generate_youtube_metadata(story_data: dict) -> dict:
 
 
 def build_upload_payload(story_id: str, youtube_metadata: dict) -> dict:
-    """預留給未來 YouTube Data API（videos.insert）上傳流程用的欄位骨架。
-
-    這次沒有實際呼叫 YouTube API，只先把上傳時會用到的欄位定義好、把目前
-    已知的內容（title/description/tags）填進 snippet，狀態類欄位
-    （video_id／published_at／upload_status）先留空，等未來接上真正的上傳
-    腳本時再回填，成功上傳後可以直接更新這份檔案。
+    """組出上傳到 YouTube 時要用的欄位（snippet/status），並預留
+    upload_status／video_id／published_at／thumbnail_path 給
+    `engine.publish.pipeline` 的 `upload_video()` 呼叫 UploadProvider
+    後回填。
     """
     return {
         "story_id": story_id,

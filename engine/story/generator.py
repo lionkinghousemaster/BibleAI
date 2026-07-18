@@ -1,7 +1,7 @@
 from character_manager import CharacterManager
-from camera_manager import CameraManager
 
 from engine.prompt import PromptLibrary
+from engine.video import CameraManager
 
 from .llm_provider import DummyLLMProvider, LLMProvider
 
