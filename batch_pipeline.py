@@ -4,6 +4,7 @@ from pathlib import Path
 from character_manager import CharacterManager
 from content_metadata import build_upload_payload, generate_cover_prompt, generate_youtube_metadata
 from engine.prompt import PromptBuilder, generate_prompt_report
+from engine.publish import DummyUploadProvider, YouTubeUploadProvider
 from generate_image import ComfyUIProvider, DummyProvider, generate_image_from_prompt, generate_scene_image
 from generate_subtitle import generate_subtitle_srt
 from generate_video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
@@ -19,6 +20,10 @@ WORKFLOW_PATH = Path(__file__).parent / "workflows" / "flux_schnell_basic.json"
 ACTIVE_IMAGE_PROVIDER = "comfyui"  # "comfyui" 或 "dummy"
 ACTIVE_VOICE_PROVIDER = "edge-tts"  # "edge-tts" 或 "dummy"
 ACTIVE_VIDEO_PROVIDER = "ffmpeg"  # "ffmpeg" 或 "dummy"
+# 預設 "dummy"：真正上傳到 YouTube 需要事先完成 Google OAuth 設定（見
+# engine/publish/uploader.py 的 YouTubeUploadProvider docstring），改成
+# "youtube" 前請確認 youtube_client_secrets.json 已就緒。
+ACTIVE_UPLOAD_PROVIDER = "dummy"  # "youtube" 或 "dummy"
 
 
 def get_image_provider():
@@ -43,6 +48,12 @@ def get_video_provider():
     if ACTIVE_VIDEO_PROVIDER == "ffmpeg":
         return FFmpegVideoProvider()
     return DummyVideoProvider()
+
+
+def get_upload_provider():
+    if ACTIVE_UPLOAD_PROVIDER == "youtube":
+        return YouTubeUploadProvider()
+    return DummyUploadProvider()
 
 
 class ReleasePaths:
@@ -202,6 +213,58 @@ def generate_cover_image(story_data: dict, paths: ReleasePaths, prompt_builder: 
     return cover_prompt
 
 
+def load_previous_upload_result(paths: ReleasePaths) -> dict:
+    """讀取上一次執行留下的 upload.json，若該故事已經真正上傳成功
+    （`upload_status == "uploaded"`），回傳其 upload_status/video_id/
+    published_at/thumbnail_path，讓 upload_video() 可以跳過重複上傳。
+    找不到檔案、格式錯誤、或尚未上傳成功，一律回傳空 dict，不丟例外。
+    """
+    upload_json_path = paths.metadata_dir / "upload.json"
+    if not upload_json_path.exists():
+        return {}
+
+    try:
+        previous = json.loads(upload_json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+    if previous.get("upload_status") != "uploaded":
+        return {}
+
+    return {
+        "upload_status": previous.get("upload_status"),
+        "video_id": previous.get("video_id"),
+        "published_at": previous.get("published_at"),
+        "thumbnail_path": previous.get("thumbnail_path"),
+    }
+
+
+def upload_video(paths: ReleasePaths, upload_payload: dict) -> dict:
+    """把 upload_payload（snippet/status）連同整集影片與封面圖交給
+    UploadProvider 實際上傳，回傳更新後的 upload_payload（補上
+    upload_status/video_id/published_at/thumbnail_path）。
+
+    若上一次執行已經成功上傳過（見 load_previous_upload_result），直接
+    沿用舊有的 video_id 等欄位、不重複呼叫上傳 API，避免同一部作品被
+    重複上傳。整集影片還不存在（例如影片合成失敗）時，同樣跳過上傳，
+    upload_status 維持 build_upload_payload() 給的預設值 "not_uploaded"。
+    """
+    previous_result = load_previous_upload_result(paths)
+    if previous_result:
+        upload_payload.update(previous_result)
+        return upload_payload
+
+    if not paths.episode_video.exists():
+        return upload_payload
+
+    provider = get_upload_provider()
+    thumbnail_path = paths.cover_image if paths.cover_image.exists() else None
+    result = provider.upload(paths.episode_video, upload_payload, thumbnail_path=thumbnail_path)
+    upload_payload.update(result)
+
+    return upload_payload
+
+
 def export_metadata(story_data: dict, paths: ReleasePaths, prompt_builder: PromptBuilder, story_id: str) -> tuple:
     cover_prompt = generate_cover_image(story_data, paths, prompt_builder)
     (paths.metadata_dir / "cover_prompt.txt").write_text(cover_prompt, encoding="utf-8")
@@ -226,6 +289,7 @@ def export_metadata(story_data: dict, paths: ReleasePaths, prompt_builder: Promp
     (paths.metadata_dir / "tags.txt").write_text("\n".join(youtube_metadata["tags"]), encoding="utf-8")
 
     upload_payload = build_upload_payload(story_id, youtube_metadata)
+    upload_payload = upload_video(paths, upload_payload)
     (paths.metadata_dir / "upload.json").write_text(
         json.dumps(upload_payload, ensure_ascii=False, indent=2), encoding="utf-8"
     )

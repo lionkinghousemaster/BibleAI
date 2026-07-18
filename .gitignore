@@ -6,3 +6,8 @@ output/*
 
 release/*
 !release/.gitkeep
+
+# YouTube OAuth 2.0 憑證與 token（engine/publish/uploader.py 的
+# YouTubeUploadProvider）——含使用者帳號授權資訊，絕對不能進版本控制。
+youtube_client_secrets.json
+youtube_token.json
