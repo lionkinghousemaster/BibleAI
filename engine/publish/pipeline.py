@@ -4,10 +4,10 @@ from pathlib import Path
 from character_manager import CharacterManager
 from engine.image import ComfyUIProvider, DummyProvider, generate_image_from_prompt, generate_scene_image
 from engine.prompt import PromptBuilder, generate_prompt_report
+from engine.story import StoryScanner
 from engine.video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
 from generate_subtitle import generate_subtitle_srt
 from generate_voice import DummyVoiceProvider, EdgeTTSProvider
-from story_scanner import StoryScanner
 
 from .metadata import build_upload_payload, generate_cover_prompt, generate_youtube_metadata
 from .uploader import DummyUploadProvider, YouTubeUploadProvider

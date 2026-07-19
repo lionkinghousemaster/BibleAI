@@ -10,10 +10,15 @@ class StoryScanner:
 
     無法解析的 JSON、或缺少有效 scenes 的檔案會被跳過並印出警告，不會讓
     整批掃描中斷（一個壞檔案不該讓其他正常故事也掃不到）。
+
+    `stories/` 資料夾本身仍放在專案根目錄（跟 `characters/`／`camera/`／
+    `prompts/` 一樣是資料，不隨程式碼一起搬進 `engine/`），因此預設路徑
+    往上推三層（engine/story/scanner.py -> engine/story -> engine ->
+    專案根目錄）才是 `stories/`。
     """
 
     def __init__(self, stories_dir: Path = None):
-        self.stories_dir = Path(stories_dir) if stories_dir else Path(__file__).parent / "stories"
+        self.stories_dir = Path(stories_dir) if stories_dir else Path(__file__).parent.parent.parent / "stories"
 
     def scan(self) -> list:
         """回傳所有可解析故事的 metadata 列表（依檔名排序）。"""

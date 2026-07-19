@@ -12,8 +12,8 @@ BibleAI 是一個把聖經故事自動轉成兒童向動畫短片的內容工廠
                                          │
                                          ▼
                               ┌─────────────────────┐
-                              │   StoryScanner       │  掃描 stories/，解析
-                              │ (story_scanner.py)   │  metadata，壞檔案自動跳過
+                              │  engine.story        │  掃描 stories/，解析
+                              │  StoryScanner        │  metadata，壞檔案自動跳過
                               └──────────┬───────────┘
                                          │
                                          ▼
@@ -106,8 +106,8 @@ BibleAI/
 │   │   ├── builder.py          PromptBuilder：組裝層
 │   │   ├── optimizer.py        PromptOptimizer：去重＋Token Budget 裁剪
 │   │   └── report.py           generate_prompt_report：prompt_report.txt
-│   ├── story/                  Story Engine（v0.9 新增 StoryGenerator；story_scanner.py
-│   │   │                       掃描既有故事的邏輯尚未遷入，見第 9 節 Roadmap）
+│   ├── story/                  Story Engine（v0.9 新增 StoryGenerator；scanner.py 本次遷入）
+│   │   ├── scanner.py           StoryScanner：掃描 stories/、解析故事 metadata
 │   │   ├── generator.py        StoryGenerator：依主題組出 stories/*.json 格式的故事
 │   │   ├── llm_provider.py     LLMProvider：DummyLLMProvider（離線）／AnthropicProvider（Claude API）
 │   │   └── report.py           generate_story_report：story_report.txt
@@ -125,7 +125,6 @@ BibleAI/
 │       │                        YouTubeUploadProvider（YouTube Data API v3）
 │       └── pipeline.py          ReleasePaths／process_story／run_batch 等批次協調邏輯
 ├── character_manager.py      角色管理模組
-├── story_scanner.py          掃描 stories/、解析故事 metadata
 ├── generate_story.py         StoryGenerator 執行入口：產生新故事 JSON + story_report.txt
 ├── generate_voice.py         配音生成 Provider（EdgeTTS／Dummy）
 ├── generate_subtitle.py      字幕產生（純標準庫解析 MP3 時長）
@@ -135,7 +134,7 @@ BibleAI/
 └── release/                  batch_pipeline.py 的輸出（執行產物，.gitignore 排除，只留 .gitkeep）
 ```
 
-`engine/` 是 v0.8 開始建立的分層架構：對外只需要 `from engine.prompt import PromptBuilder, generate_prompt_report` 這樣的頂層 import，不需要知道內部檔案是 library.py／builder.py／optimizer.py／report.py 這樣拆的。`engine.story`（v0.9）／`engine.image`／`engine.video`／`engine.publish`（本次 v0.9 Engine Migration Sprint）都是同樣的入口風格：`from engine.image import ComfyUIProvider, DummyProvider, generate_scene_image`、`from engine.video import FFmpegVideoProvider, CameraManager, concatenate_episode`、`from engine.publish import run_batch, process_story, ReleasePaths, DummyUploadProvider, YouTubeUploadProvider`。`engine.prompt`／`engine.story`／`engine.image`／`engine.video`／`engine.publish` 現在都有實際模組；唯一還沒遷入的是 `story_scanner.py`（掃描既有故事的邏輯，仍在專案根目錄）。`character_manager.py`（角色資料存取，不屬於任何單一 Engine，被 `engine.prompt`／`engine.story`／`engine.publish` 共用）與 `generate_voice.py`／`generate_subtitle.py`（尚未規劃對應的 Engine）目前仍是獨立的頂層模組。`prompts/`／`characters/`／`camera/`（模板／資料）一樣仍放在專案根目錄，不隨程式碼一起搬進 `engine/`——各自對應的 Manager／Library 內部路徑會依實際遷入深度往上推對應層數解析回專案根目錄（例如 `engine/video/camera_manager.py` 往上推三層才是 `camera/`）。
+`engine/` 是 v0.8 開始建立的分層架構：對外只需要 `from engine.prompt import PromptBuilder, generate_prompt_report` 這樣的頂層 import，不需要知道內部檔案是 library.py／builder.py／optimizer.py／report.py 這樣拆的。`engine.story`（v0.9）／`engine.image`／`engine.video`／`engine.publish`（本次 v0.9 Engine Migration Sprint）都是同樣的入口風格：`from engine.image import ComfyUIProvider, DummyProvider, generate_scene_image`、`from engine.video import FFmpegVideoProvider, CameraManager, concatenate_episode`、`from engine.publish import run_batch, process_story, ReleasePaths, DummyUploadProvider, YouTubeUploadProvider`。`engine.prompt`／`engine.story`／`engine.image`／`engine.video`／`engine.publish` 現在都有實際模組，頂層目錄只剩 `main.py`、`batch_pipeline.py` 這類入口腳本，以及 `character_manager.py`／`generate_story.py`／`generate_voice.py`／`generate_subtitle.py`。`character_manager.py`（角色資料存取，不屬於任何單一 Engine，被 `engine.prompt`／`engine.story`／`engine.publish` 共用）與 `generate_voice.py`／`generate_subtitle.py`（尚未規劃對應的 Engine）目前仍是獨立的頂層模組。`prompts/`／`characters/`／`camera/`（模板／資料）一樣仍放在專案根目錄，不隨程式碼一起搬進 `engine/`——各自對應的 Manager／Library／Scanner 內部路徑會依實際遷入深度往上推對應層數解析回專案根目錄（例如 `engine/video/camera_manager.py`、`engine/story/scanner.py` 都是往上推三層才是 `camera/`／`stories/`）。
 
 ## 4. 核心模組角色
 
@@ -152,6 +151,8 @@ BibleAI/
 - **`generate_prompt_report`**（`engine/prompt/report.py`）：產生整部作品的 `prompt_report.txt`，逐 scene 列出每個模組的字元數、token 數、來源（preset 檔案路徑或 Manager 名稱）與權重，以及完整的去重／裁剪 debug log。
 
 以上四個模組對外都從 `engine.prompt` 這一個入口 import（`from engine.prompt import PromptBuilder, PromptLibrary, PromptOptimizer, generate_prompt_report`），呼叫端不需要知道內部檔案是怎麼拆的。
+
+- **StoryScanner**（`engine/story/scanner.py`）：掃描 `stories/` 底下所有故事 JSON、解析出 `episode`/`book`/`chapter`/`title_zh`/`title_en`/`duration`/`scene_count` 等 metadata。新增一部作品只需要在 `stories/` 底下多丟一個 JSON 檔案，不需要改任何程式碼；無法解析的 JSON 或缺少有效 `scenes` 的檔案會被跳過並印出警告，不會讓整批掃描中斷。
 
 - **StoryGenerator**（`engine/story/generator.py`，v0.9 新增）：依主題自動產生符合 `stories/*.json` 格式的故事。本身不生成敘事內容——把 `CharacterManager`／`CameraManager`／`PromptLibrary` 目前有哪些可用的角色、鏡頭運動、lighting/composition/style preset id 組成 context 交給注入的 `LLMProvider`，再驗證回傳的每個 scene（不存在的 character/camera/preset id 一律回退成安全預設值、duration 轉成合法正整數、依序補上 `scene_number`），組成與 `stories/Genesis_001.json` 完全相同結構的故事 dict，可以直接存成 JSON 交給 `batch_pipeline.py` 處理。
 
@@ -235,7 +236,7 @@ story = generator.generate(
   python main.py
   ```
 
-- **只想重新生成某部作品的某個環節**（例如改了 prompt 模板想重新生成圖片）：可以在 Python 內直接呼叫 `batch_pipeline.py` re-export 的函式（`generate_images`／`export_voice`／`export_subtitles`／`generate_videos`／`generate_episode_video`／`export_metadata`，實作都在 `engine/publish/pipeline.py`），傳入 `story_scanner.StoryScanner().get("<story_id>")` 取得的 story 資料與對應的 `ReleasePaths`，不需要重跑整個 `run_batch()`。
+- **只想重新生成某部作品的某個環節**（例如改了 prompt 模板想重新生成圖片）：可以在 Python 內直接呼叫 `batch_pipeline.py` re-export 的函式（`generate_images`／`export_voice`／`export_subtitles`／`generate_videos`／`generate_episode_video`／`export_metadata`，實作都在 `engine/publish/pipeline.py`），傳入 `engine.story.StoryScanner().get("<story_id>")` 取得的 story 資料與對應的 `ReleasePaths`，不需要重跑整個 `run_batch()`。
 - 執行前請確認需要的外部服務已啟動：圖片走 ComfyUI 需要先啟動 ComfyUI（預設 `http://127.0.0.1:8188`）；影片合成需要本機安裝 FFmpeg 並可在 PATH 找到 `ffmpeg`/`ffprobe`。
 - 真正上傳到 YouTube（`ACTIVE_UPLOAD_PROVIDER = "youtube"`）需要事先完成以下設定，預設值是不會呼叫任何網路 API 的 `"dummy"`：
   1. `pip install google-api-python-client google-auth-oauthlib google-auth-httplib2`（本專案沒有維護 `requirements.txt`，跟 `edge-tts` 的作法一致，需要另外手動安裝）。
@@ -252,10 +253,9 @@ story = generator.generate(
 
 已完成（v1.0）：YouTube 實際上傳（`engine.publish` 的 `UploadProvider`/`DummyUploadProvider`/`YouTubeUploadProvider`，見第 4、8 節）——`export_metadata()` 現在會真正呼叫 YouTube Data API v3 上傳整集影片與封面縮圖，並把 `upload_status`/`video_id`/`published_at` 回填進 `upload.json`；已上傳成功的作品重跑批次不會被重複上傳。
 
-已完成（v0.9 Engine Migration Sprint）：其餘 Engine 遷入——`generate_image.py`→`engine/image/provider.py`、`generate_video.py`/`camera_manager.py`→`engine/video/provider.py`+`engine/video/camera_manager.py`、`content_metadata.py`/`batch_pipeline.py` 的實作→`engine/publish/metadata.py`+`engine/publish/pipeline.py`（見第 3 節）。`main.py`／`batch_pipeline.py` 現在都只是入口腳本，`python main.py`／`python batch_pipeline.py` 行為與遷移前完全相同；每遷完一個 Engine 都跑過 `main.py`／`batch_pipeline.py` regression test 確認無回歸。唯一還沒遷入的是 `story_scanner.py`（見下一項）。
+已完成（v0.9 Engine Migration Sprint）：其餘 Engine 遷入——`generate_image.py`→`engine/image/provider.py`、`generate_video.py`/`camera_manager.py`→`engine/video/provider.py`+`engine/video/camera_manager.py`、`content_metadata.py`/`batch_pipeline.py` 的實作→`engine/publish/metadata.py`+`engine/publish/pipeline.py`、`story_scanner.py`→`engine/story/scanner.py`（見第 3 節）。`main.py`／`batch_pipeline.py` 現在都只是入口腳本，`python main.py`／`python batch_pipeline.py` 行為與遷移前完全相同；每遷完一個 Engine 都跑過 `main.py`／`batch_pipeline.py` regression test 確認無回歸。`engine.prompt`／`engine.story`／`engine.image`／`engine.video`／`engine.publish` 現在都是實際模組，v0.8 訂下的 Engine Layer 遷移目標全數完成。
 
 - **v1.0 — YouTube 實際上傳實測**：`YouTubeUploadProvider` 已完整實作（`videos.insert` + `thumbnails.set` + OAuth 憑證管理），但這個開發環境沒有 Google Cloud OAuth 憑證，只用 `DummyUploadProvider` 驗證過「上傳結果回填」與「已上傳過就跳過」的邏輯，尚未對真正的 YouTube API 實測過——需要使用者依第 8 節設定好 `youtube_client_secrets.json` 後，實際跑一次 `python batch_pipeline.py`（`ACTIVE_UPLOAD_PROVIDER = "youtube"`）確認整個流程。
-- **v0.9 — story_scanner.py 遷入 engine.story**：目前 `engine.story` 只遷入了 `StoryGenerator`（v0.9）；`StoryScanner`（掃描 `stories/` 底下既有故事）仍在專案根目錄的 `story_scanner.py`，是唯一還沒遷入對應 `engine.*` 的頂層模組。
 - **v0.9 — Story Generator 品質驗證**：目前只用 `DummyLLMProvider` 跑過完整流程驗證 schema 相容性；`AnthropicProvider` 尚未接上真實 `ANTHROPIC_API_KEY` 實測過，需要實際跑一次並檢視 `story_report.txt`／`prompt_report.txt`，確認生成內容的敘事品質與 image_prompt 是否符合兒童向分級與角色一致性要求。
 - **v0.9 — 多集規模驗證**：目前只有 `Genesis_001` 一部作品跑過完整流程，需要實際新增第二、第三部作品，驗證 Content/Publishing Factory 在多故事規模下的穩定性與耗時。
 - **v0.9 — Prompt 資料清理**：把 `stories/*.json` 的 `image_prompt` 與 `characters/*.json` 的 `visual_prompt` 裡內嵌的風格字詞抽離，讓 `prompts/style/` 成為唯一風格來源，真正吃到 PromptOptimizer 去重帶來的 token 節省。
