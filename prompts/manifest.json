@@ -12,6 +12,14 @@
       "weight": 1,
       "default_preset": "default"
     },
+    "camera_angle": {
+      "weight": 0,
+      "default_preset": "eye_level"
+    },
+    "mood": {
+      "weight": 0,
+      "default_preset": "neutral"
+    },
     "negative": {
       "weight": 1,
       "default_preset": "default"

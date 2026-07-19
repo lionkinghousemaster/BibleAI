@@ -1,0 +1,6 @@
+{
+  "id": "high_angle",
+  "category": "camera_angle",
+  "prompt": "high-angle camera looking downward, subject appears small and vulnerable",
+  "description": "由上往下俯瞰的視角，適合衝突、犯錯、渺小無助等情緒的場景。"
+}

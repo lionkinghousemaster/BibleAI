@@ -35,11 +35,18 @@ class PromptLibrary:
     才是 `prompts/`。
     """
 
+    #: `camera_angle`／`mood`（v0.9 Director Intelligence Sprint 新增）刻意
+    #: 用 weight 0——budget 不足需要裁剪時，這兩個分類永遠優先被裁到 0，
+    #: 讓 Lighting/Composition/Style 維持這個機制加入之前完全一樣的預算
+    #: 分配結果（weight 0 不影響其他分類計算份額時的權重總和）。budget
+    #: 足夠、完全不需要裁剪的 scene 仍然會完整保留這兩個分類的內容。
     DEFAULT_MANIFEST = {
         "categories": {
             "lighting": {"weight": 3, "default_preset": "default"},
             "composition": {"weight": 2, "default_preset": "default"},
             "style": {"weight": 1, "default_preset": "default"},
+            "camera_angle": {"weight": 0, "default_preset": "eye_level"},
+            "mood": {"weight": 0, "default_preset": "neutral"},
             "negative": {"weight": 1, "default_preset": "default"},
         },
         "character_priority_weights": {

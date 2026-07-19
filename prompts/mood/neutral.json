@@ -1,0 +1,6 @@
+{
+  "id": "neutral",
+  "category": "mood",
+  "prompt": "calm and gentle mood",
+  "description": "預設情緒，沒有偵測到特定語意信號的場景使用。"
+}

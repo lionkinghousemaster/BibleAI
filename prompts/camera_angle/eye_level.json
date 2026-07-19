@@ -1,0 +1,6 @@
+{
+  "id": "eye_level",
+  "category": "camera_angle",
+  "prompt": "eye-level camera angle, natural neutral perspective",
+  "description": "預設中性視角，適合大多數敘事場景，不特別強調威嚴或渺小感。"
+}

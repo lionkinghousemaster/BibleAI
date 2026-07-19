@@ -1,5 +1,7 @@
 from character_manager import CharacterManager
 
+from engine.director import resolve_visual_plan
+
 from .importance import resolve_character_importance
 from .library import PromptLibrary
 from .optimizer import PromptOptimizer
@@ -17,11 +19,23 @@ class PromptBuilder:
       Character（透過 CharacterManager，依 scene["characters"] 逐一查
       visual_prompt，每個角色各自成為一個獨立分類，見 Story Intelligence）
       Environment（scene 既有的 image_prompt，逐場景手寫，不走模板）
-      Lighting / Composition / Style（透過 PromptLibrary 讀取
-      prompts/<category>/*.json 模板；scene 可用 scene["lighting"]／
-      ["composition"]／["style"] 指定 preset id，省略時由 PromptLibrary
-      依 prompts/manifest.json 決定預設值）
+      Lighting / Composition / Camera Angle / Mood / Style（透過
+      PromptLibrary 讀取 prompts/<category>/*.json 模板；preset id 不再
+      固定用 manifest 的 default_preset，而是由 `engine.director` 的
+      Director Layer 依 scene 語意自動決定，見下方 Director 機制；
+      scene 仍可用 scene["lighting"]／["composition"]／["camera_angle"]／
+      ["mood"]／["style"] 明確覆寫，Director 不會蓋掉人工指定的值）
     負向 prompt 獨立一層，同樣透過 PromptLibrary（prompts/negative/*.json）。
+
+    Director 機制（v0.9 Director Intelligence Sprint 新增）：`engine.director.
+    resolve_visual_plan(scene)` 依 scene 的 narration／animation_prompt／title
+    判斷這是哪一種戲劇情境（建立／衝突／高潮／悲傷／喜樂／神顯現），再依
+    判斷結果決定 lighting／composition／camera_angle／mood 該用哪個 preset
+    id（以及 camera_shot——對應 scene["camera"]，給影片鏡頭運動參考用，
+    PromptBuilder 本身不消費這個欄位）。決定順序永遠是「scene 明確指定的
+    欄位優先，沒指定的欄位才由 Director 自動判斷」，沒有命中任何語意規則
+    時 Director 回傳的值等同這個機制導入之前的固定 "default"／"eye_level"／
+    "neutral"，行為不變。
 
     Story Intelligence（importance_score）機制：token 預算不足時，不再是
     固定的三段式 Priority（main/secondary/background），而是依
@@ -29,9 +43,9 @@ class PromptBuilder:
     保護多少：
       - `importance_score >= MAIN_IMPORTANCE_THRESHOLD`（預設 0.75）：
         視為保護分類，永遠不裁剪（跟 Environment 同等級）。
-      - 其餘：可裁剪，權重 = `max(1, round(importance_score * 10))`——
-        分數越高，budget 不足時流失得越少，而不是像三段式 Priority 那樣
-        只有三種固定權重可選。
+      - 其餘：可裁剪，權重 = `max(1, round(importance_score * IMPORTANCE_WEIGHT_SCALE))`
+        （預設 `IMPORTANCE_WEIGHT_SCALE = 5`）——分數越高，budget 不足時
+        流失得越少，而不是像三段式 Priority 那樣只有三種固定權重可選。
     importance_score 的來源（見 `resolve_character_importance`）：scene
     可用 `scene["character_importance"]`（`{character_id: 0.0~1.0}`）
     明確覆寫；沒覆寫的角色會嘗試沿用 v0.9 Token Allocation Sprint 的
@@ -131,15 +145,21 @@ class PromptBuilder:
         """回傳 (最終正向 prompt, debug log 訊息列表)。"""
         character_sections, protected_characters, character_weights, _importance = self._character_sections(scene)
 
+        visual_plan = resolve_visual_plan(scene)
+
         environment_prompt = scene.get("image_prompt", "")
-        lighting_prompt = self.prompt_library.get_text("lighting", scene.get("lighting"))
-        composition_prompt = self.prompt_library.get_text("composition", scene.get("composition"))
+        lighting_prompt = self.prompt_library.get_text("lighting", visual_plan["lighting"])
+        composition_prompt = self.prompt_library.get_text("composition", visual_plan["composition"])
+        camera_angle_prompt = self.prompt_library.get_text("camera_angle", visual_plan["camera_angle"])
+        mood_prompt = self.prompt_library.get_text("mood", visual_plan["mood"])
         style_prompt = self.prompt_library.get_text("style", scene.get("style"))
 
         ordered_sections = character_sections + [
             ("environment", environment_prompt),
             ("lighting", lighting_prompt),
             ("composition", composition_prompt),
+            ("camera_angle", camera_angle_prompt),
+            ("mood", mood_prompt),
             ("style", style_prompt),
         ]
 
@@ -195,15 +215,21 @@ class PromptBuilder:
         )
         character_ids = [category.split(":", 1)[1] for category, _ in character_sections]
 
+        visual_plan = resolve_visual_plan(scene)
+
         environment_prompt = scene.get("image_prompt", "")
 
-        lighting_preset = self.prompt_library.resolve_preset_id("lighting", scene.get("lighting"))
-        composition_preset = self.prompt_library.resolve_preset_id("composition", scene.get("composition"))
+        lighting_preset = self.prompt_library.resolve_preset_id("lighting", visual_plan["lighting"])
+        composition_preset = self.prompt_library.resolve_preset_id("composition", visual_plan["composition"])
+        camera_angle_preset = self.prompt_library.resolve_preset_id("camera_angle", visual_plan["camera_angle"])
+        mood_preset = self.prompt_library.resolve_preset_id("mood", visual_plan["mood"])
         style_preset = self.prompt_library.resolve_preset_id("style", scene.get("style"))
         negative_preset = self.prompt_library.resolve_preset_id("negative", scene.get("negative"))
 
-        lighting_prompt = self.prompt_library.get_text("lighting", scene.get("lighting"))
-        composition_prompt = self.prompt_library.get_text("composition", scene.get("composition"))
+        lighting_prompt = self.prompt_library.get_text("lighting", visual_plan["lighting"])
+        composition_prompt = self.prompt_library.get_text("composition", visual_plan["composition"])
+        camera_angle_prompt = self.prompt_library.get_text("camera_angle", visual_plan["camera_angle"])
+        mood_prompt = self.prompt_library.get_text("mood", visual_plan["mood"])
         style_prompt = self.prompt_library.get_text("style", scene.get("style"))
 
         positive_prompt, positive_log = self.build_positive_prompt_with_debug(scene)
@@ -248,6 +274,18 @@ class PromptBuilder:
             "source": f"prompts/composition/{composition_preset}.json",
             "weight": self.prompt_library.weight("composition"),
         }
+        module_info["camera_angle"] = {
+            "chars": len(camera_angle_prompt),
+            "tokens": self.optimizer.estimate_tokens(camera_angle_prompt),
+            "source": f"prompts/camera_angle/{camera_angle_preset}.json",
+            "weight": self.prompt_library.weight("camera_angle"),
+        }
+        module_info["mood"] = {
+            "chars": len(mood_prompt),
+            "tokens": self.optimizer.estimate_tokens(mood_prompt),
+            "source": f"prompts/mood/{mood_preset}.json",
+            "weight": self.prompt_library.weight("mood"),
+        }
         module_info["style"] = {
             "chars": len(style_prompt),
             "tokens": self.optimizer.estimate_tokens(style_prompt),
@@ -265,6 +303,12 @@ class PromptBuilder:
             "scene_number": scene.get("scene_number"),
             "character_ids": character_ids,
             "module_info": module_info,
+            "director_decision": {
+                "theme": visual_plan["theme"],
+                "matched_keywords": visual_plan["matched_keywords"],
+                "camera_shot": visual_plan["camera_shot"],
+                "sources": visual_plan["sources"],
+            },
             "final_positive_chars": len(positive_prompt),
             "final_positive_tokens": self.optimizer.estimate_tokens(positive_prompt),
             "final_negative_chars": len(negative_prompt),
