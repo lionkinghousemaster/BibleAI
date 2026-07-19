@@ -1,5 +1,6 @@
 from character_manager import CharacterManager
 
+from engine.director import decide_visual_plan
 from engine.prompt import PromptLibrary, compute_importance
 from engine.video import CameraManager
 
@@ -15,8 +16,12 @@ class StoryGenerator:
          可用的角色、鏡頭運動、lighting/composition/style preset 組成
          context，交給 LLMProvider 生成 scene 草稿。
       2. 驗證 LLMProvider 回傳的每個 scene：character/camera/lighting/
-         composition/style id 若不是既有資產就回退成安全預設值（不丟
-         例外），duration 轉成合法正整數，並依序補上 scene_number。
+         composition/style id 若不是既有資產就回退成安全預設值——其中
+         `camera` 的回退值不是固定挑第一個 camera preset，而是先呼叫
+         `engine.director.decide_visual_plan` 依這個 scene 的語意給出建議
+         （見 v0.9 Director Camera Integration Mission），建議值仍不是
+         既有 camera preset 時才退回原本的固定預設值——duration 轉成合法
+         正整數，並依序補上 scene_number。
       3. 幫每個 scene 的每個角色算出 `character_importance`（0.0～1.0，
          見 `engine.prompt.importance.compute_importance`：是否為主角、
          是否有台詞、是否有動作、是否為情節核心），直接寫進 scene 資料，
@@ -152,7 +157,8 @@ class StoryGenerator:
 
         camera = raw_scene.get("camera")
         if camera not in valid_camera_ids:
-            camera = default_camera_id
+            suggested_camera = decide_visual_plan(raw_scene)["camera_shot"]
+            camera = suggested_camera if suggested_camera in valid_camera_ids else default_camera_id
 
         scene = {
             "scene_number": scene_number,

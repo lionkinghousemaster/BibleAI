@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from character_manager import CharacterManager
+from engine.director import resolve_visual_plan
 from engine.image import ComfyUIProvider, DummyProvider, generate_scene_image
 from engine.prompt import PromptBuilder, generate_prompt_report
 from engine.video import DummyVideoProvider, FFmpegVideoProvider, concatenate_episode, get_episode_video_paths
@@ -139,7 +140,7 @@ def generate_videos(story):
     count = 0
     for scene in story.get("scenes", []):
         scene_number = scene.get("scene_number")
-        camera_id = scene.get("camera")
+        camera_id = resolve_visual_plan(scene)["camera_shot"]
 
         image_path = IMAGES_DIR / f"scene{scene_number:03d}.png"
         audio_path = AUDIO_DIR / f"scene{scene_number:03d}.mp3"
