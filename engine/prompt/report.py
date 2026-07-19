@@ -4,12 +4,13 @@ MODULE_ORDER = ["environment", "lighting", "composition", "style", "negative"]
 
 
 def generate_prompt_report(story_data: dict, prompt_builder: PromptBuilder = None) -> str:
-    """產生整部作品的 prompt_report.txt 內容：逐 scene 列出每個角色（依
-    Character Priority 分出的 tier／權重，見 PromptBuilder）與
-    Environment/Lighting/Composition/Style/Negative 的字元數、token 數、
-    來源（preset 檔案路徑或 Manager 名稱）與 Token Budget 權重，以及
-    PromptOptimizer 的去重／裁剪紀錄，方便人工檢視 Prompt Engine 的運作
-    狀況，以及確認每個模組實際是從哪個來源載入的。
+    """產生整部作品的 prompt_report.txt 內容：逐 scene 列出每個角色的
+    importance_score（含四個原始信號與來源，見 engine.prompt.importance）
+    與實際分配到的權重／token 數，以及 Environment/Lighting/Composition/
+    Style/Negative 的字元數、token 數、來源（preset 檔案路徑或 Manager
+    名稱）與 Token Budget 權重，以及 PromptOptimizer 的去重／裁剪紀錄，
+    方便人工檢視 Prompt Engine 的運作狀況、分析「AI 為什麼決定這樣分配
+    token」，以及確認每個模組實際是從哪個來源載入的。
     """
     builder = prompt_builder or PromptBuilder()
     lines = ["BibleAI Prompt Engine Report", "=" * 60, ""]
@@ -26,6 +27,9 @@ def generate_prompt_report(story_data: dict, prompt_builder: PromptBuilder = Non
                 f"  {category:<20} chars={info['chars']:>5}  tokens={info['tokens']:>4}  "
                 f"weight={str(info['weight']):<9}  source={info['source']}"
             )
+            if "importance_score" in info:
+                signals = ", ".join(info["signals"]) if info["signals"] else "(none)"
+                lines.append(f"    importance_score={info['importance_score']:.2f}  signals=[{signals}]")
 
         lines.append(
             f"  {'FINAL positive':<12} chars={entry['final_positive_chars']:>5}  "

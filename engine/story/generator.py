@@ -1,6 +1,6 @@
 from character_manager import CharacterManager
 
-from engine.prompt import PromptLibrary
+from engine.prompt import PromptLibrary, compute_importance
 from engine.video import CameraManager
 
 from .llm_provider import DummyLLMProvider, LLMProvider
@@ -10,14 +10,19 @@ class StoryGenerator:
     """依主題自動產生符合 `stories/*.json` 格式的故事。
 
     StoryGenerator 本身不生成敘事內容——那是注入的 LLMProvider 的責任
-    （見 llm_provider.py）。StoryGenerator 只負責三件事：
+    （見 llm_provider.py）。StoryGenerator 負責四件事：
       1. 把 CharacterManager／CameraManager／PromptLibrary 目前有哪些
          可用的角色、鏡頭運動、lighting/composition/style preset 組成
          context，交給 LLMProvider 生成 scene 草稿。
       2. 驗證 LLMProvider 回傳的每個 scene：character/camera/lighting/
          composition/style id 若不是既有資產就回退成安全預設值（不丟
          例外），duration 轉成合法正整數，並依序補上 scene_number。
-      3. 組成與 `stories/Genesis_001.json` 完全相同結構的故事 dict
+      3. 幫每個 scene 的每個角色算出 `character_importance`（0.0～1.0，
+         見 `engine.prompt.importance.compute_importance`：是否為主角、
+         是否有台詞、是否有動作、是否為情節核心），直接寫進 scene 資料，
+         讓 `engine.prompt.PromptBuilder` 之後不需要再現場計算就能決定
+         每個角色的描述長度（v0.9 Story Intelligence Sprint 新增）。
+      4. 組成與 `stories/Genesis_001.json` 完全相同結構的故事 dict
          （episode/book/chapter/title_zh/title_en/duration/language/
          scenes），可以直接存成 JSON 交給 batch_pipeline.py 處理，也可以
          直接被 engine.prompt.PromptBuilder／CameraManager 消費，不需要
@@ -173,6 +178,14 @@ class StoryGenerator:
         style = raw_scene.get("style")
         if style in valid_style_ids:
             scene["style"] = style
+
+        if characters:
+            scene["character_importance"] = {
+                character_id: compute_importance(
+                    character_id, self.character_manager.get_character(character_id), scene
+                )["importance_score"]
+                for character_id in characters
+            }
 
         return scene
 
