@@ -12,6 +12,10 @@ class PromptLibrary:
         （PromptOptimizer 用來決定預算不足時誰先被裁）
       - `default_preset`：scene 沒有指定該分類 preset id 時的預設值
 
+    也讀取 `character_priority_weights`：Secondary／Background 角色（見
+    PromptBuilder 的 Character Priority 機制）在 Token Budget 分配時的
+    權重。Main 角色永遠是保護分類、不受這個權重影響。
+
     這樣「有哪些分類」「各自的權重」「預設用哪個 preset」都是資料
     （`prompts/manifest.json`），不是寫死在 PromptBuilder／PromptOptimizer
     程式碼裡的常數；PromptBuilder 因此不需要保存任何固定的 Prompt 字串
@@ -37,7 +41,11 @@ class PromptLibrary:
             "composition": {"weight": 2, "default_preset": "default"},
             "style": {"weight": 1, "default_preset": "default"},
             "negative": {"weight": 1, "default_preset": "default"},
-        }
+        },
+        "character_priority_weights": {
+            "secondary": 3,
+            "background": 1,
+        },
     }
 
     def __init__(self, prompts_dir: Path = None):
@@ -63,6 +71,14 @@ class PromptLibrary:
 
     def weight(self, category: str) -> int:
         return self._manifest.get("categories", {}).get(category, {}).get("weight", 1)
+
+    def character_priority_weight(self, tier: str) -> int:
+        """回傳 Secondary／Background 角色在 Token Budget 分配時的權重
+        （見 PromptBuilder 的 Character Priority 機制）。Main 角色不會呼叫
+        這個方法——它們永遠是保護分類。找不到 tier 對應的權重（例如
+        manifest 缺這個 key，或傳入未知的 tier 字串）一律回傳 1，不丟例外。
+        """
+        return self._manifest.get("character_priority_weights", {}).get(tier, 1)
 
     def category_weights(self) -> dict:
         """回傳 {category: weight}，供 PromptOptimizer 的 Token Budget 分配使用。"""

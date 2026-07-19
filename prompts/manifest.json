@@ -16,5 +16,9 @@
       "weight": 1,
       "default_preset": "default"
     }
+  },
+  "character_priority_weights": {
+    "secondary": 3,
+    "background": 1
   }
 }

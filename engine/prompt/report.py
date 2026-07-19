@@ -1,14 +1,15 @@
 from .builder import PromptBuilder
 
-MODULE_ORDER = ["character", "environment", "lighting", "composition", "style", "negative"]
+MODULE_ORDER = ["environment", "lighting", "composition", "style", "negative"]
 
 
 def generate_prompt_report(story_data: dict, prompt_builder: PromptBuilder = None) -> str:
-    """產生整部作品的 prompt_report.txt 內容：逐 scene 列出各模組
-    （Character/Environment/Lighting/Composition/Style/Negative）的字元數、
-    token 數、來源（preset 檔案路徑或 Manager 名稱）與 Token Budget 權重，
-    以及 PromptOptimizer 的去重／裁剪紀錄，方便人工檢視 Prompt Engine
-    的運作狀況，以及確認每個模組實際是從哪個來源載入的。
+    """產生整部作品的 prompt_report.txt 內容：逐 scene 列出每個角色（依
+    Character Priority 分出的 tier／權重，見 PromptBuilder）與
+    Environment/Lighting/Composition/Style/Negative 的字元數、token 數、
+    來源（preset 檔案路徑或 Manager 名稱）與 Token Budget 權重，以及
+    PromptOptimizer 的去重／裁剪紀錄，方便人工檢視 Prompt Engine 的運作
+    狀況，以及確認每個模組實際是從哪個來源載入的。
     """
     builder = prompt_builder or PromptBuilder()
     lines = ["BibleAI Prompt Engine Report", "=" * 60, ""]
@@ -18,10 +19,11 @@ def generate_prompt_report(story_data: dict, prompt_builder: PromptBuilder = Non
         lines.append(f"Scene {entry['scene_number']:03d}")
         lines.append("-" * 40)
 
-        for category in MODULE_ORDER:
+        character_categories = [f"character:{cid}" for cid in entry.get("character_ids", [])]
+        for category in character_categories + MODULE_ORDER:
             info = entry["module_info"].get(category, {"chars": 0, "tokens": 0, "source": "-", "weight": "-"})
             lines.append(
-                f"  {category:<12} chars={info['chars']:>5}  tokens={info['tokens']:>4}  "
+                f"  {category:<20} chars={info['chars']:>5}  tokens={info['tokens']:>4}  "
                 f"weight={str(info['weight']):<9}  source={info['source']}"
             )
 

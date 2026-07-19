@@ -9,13 +9,18 @@ class PromptOptimizer:
     - 去重以逗號分隔的片語為單位，保留每個片語第一次出現的位置，維持
       呼叫端傳入的分類順序（例如 Character > Environment > Lighting >
       Composition > Style）。
-    - Priority／Token Budget：Character、Environment 是保護分類，一律
-      不限制、不裁剪。其餘分類（預設 Lighting > Composition > Style）
-      依 category_weights 的權重，把「扣掉保護分類之後剩下的預算」用
-      瀑布式比例分配給每個分類——權重高的分類先按比例取得份額，若它本身
-      不需要那麼多（內容較短），沒用完的預算會留給後面權重較低的分類，
-      而不是被浪費掉。分配好預算後，每個分類各自裁到符合「自己的預算」，
-      而不是像過去那樣不斷從某個分類尾端裁到「全域總長度」符合為止。
+    - Priority／Token Budget：呼叫端（通常是 PromptBuilder）決定哪些分類
+      是「保護分類」（`protected` 參數）——固定會是 Environment，以及
+      Character 裡被標成 Main 的角色；其餘分類（Secondary／Background
+      角色、Lighting、Composition、Style）都依 `category_weights` 的權重，
+      把「扣掉保護分類之後剩下的預算」用瀑布式比例分配給每個分類——權重
+      高的分類先按比例取得份額，若它本身不需要那麼多（內容較短），沒用完
+      的預算會留給後面權重較低的分類，而不是被浪費掉。分配好預算後，每個
+      分類各自裁到符合「自己的預算」，而不是像過去那樣不斷從某個分類尾端
+      裁到「全域總長度」符合為止。這個 Optimizer 本身不知道「Character」
+      「Main／Secondary／Background」這些概念是什麼——它只認得呼叫端傳入
+      的 `(category, text)` 分類名稱與 `protected`／`category_weights`，
+      Character Priority 完全是 PromptBuilder 那一層的邏輯。
     """
 
     DEFAULT_CATEGORY_WEIGHTS = {"lighting": 3, "composition": 2, "style": 1}
@@ -66,10 +71,18 @@ class PromptOptimizer:
 
         return result, log
 
-    def allocate_budget(self, ordered_sections: list, protected: set, total_budget: int) -> dict:
+    def allocate_budget(
+        self, ordered_sections: list, protected: set, total_budget: int, category_weights: dict = None
+    ) -> dict:
         """依優先順序（ordered_sections 的順序）與 category_weights，把
         total_budget 分配給每個分類。protected 分類回傳 None（不限制，
         但仍會從總預算中扣掉它們實際佔用的 tokens）。
+
+        `category_weights` 省略時使用建構時的 `self.category_weights`；
+        呼叫端（例如 PromptBuilder 處理 Character Priority 時）可以傳入
+        「這次呼叫專屬」的權重表——例如把特定 scene 裡 Secondary／
+        Background 角色的權重併進來——而不需要影響這個 Optimizer 實例
+        的預設權重。
 
         瀑布式分配：可裁剪分類依序處理，每個分類先算出「剩餘預算 × 自己
         權重 / 剩餘分類權重總和」的理論份額，實際分配則取
@@ -77,6 +90,7 @@ class PromptOptimizer:
         沒花完的預算會繼續留在池子裡，讓後面權重較低的分類也有機會
         分到比純比例計算更多的預算。
         """
+        weights = category_weights if category_weights is not None else self.category_weights
         budgets = {}
         remaining = total_budget
 
@@ -90,8 +104,8 @@ class PromptOptimizer:
         trimmable = [(category, text) for category, text in ordered_sections if category not in protected]
 
         for index, (category, text) in enumerate(trimmable):
-            weight = self.category_weights.get(category, 1)
-            remaining_weight = sum(self.category_weights.get(c, 1) for c, _ in trimmable[index:])
+            weight = weights.get(category, 1)
+            remaining_weight = sum(weights.get(c, 1) for c, _ in trimmable[index:])
             share = round(remaining * weight / remaining_weight) if remaining_weight else 0
             natural = self.estimate_tokens(text)
             allocated = min(natural, share)
@@ -100,7 +114,9 @@ class PromptOptimizer:
 
         return budgets
 
-    def enforce_length_budget(self, ordered_sections: list, protected: set, max_tokens: int) -> tuple:
+    def enforce_length_budget(
+        self, ordered_sections: list, protected: set, max_tokens: int, category_weights: dict = None
+    ) -> tuple:
         """超過 max_tokens 時，依 Priority 建立的 Token Budget 裁剪各分類。
 
         流程：(1) 用 allocate_budget() 依優先順序算出每個非 protected 分類
@@ -108,6 +124,9 @@ class PromptOptimizer:
         分類內部仍是從尾端裁起（沒有片語重要性模型可判斷該留哪一句），
         但「該裁到剩多少」是由分配好的預算決定，不是不斷從某個分類尾端
         砍到全域總長度符合為止。
+
+        `category_weights` 見 allocate_budget()——省略時沿用建構時的
+        `self.category_weights`。
         """
         log = []
         sections = dict(ordered_sections)
@@ -120,7 +139,7 @@ class PromptOptimizer:
         if total_tokens <= max_tokens:
             return ordered_sections, log
 
-        budgets = self.allocate_budget(ordered_sections, protected, max_tokens)
+        budgets = self.allocate_budget(ordered_sections, protected, max_tokens, category_weights=category_weights)
 
         log.append(f"[budget] Prompt 預估 {total_tokens} tokens，超過上限 {max_tokens}，依優先順序分配 token 預算：")
         for category in order:
@@ -144,8 +163,10 @@ class PromptOptimizer:
         if final_tokens > max_tokens:
             log.append(
                 f"[budget] 依預算裁剪完後仍有 {final_tokens} tokens（上限 {max_tokens}）。"
-                "Character／Environment 為保護分類、不會被裁剪，這是目前已知的上限，"
-                "需要縮短故事原文或角色描述才能進一步改善。"
+                "保護分類（Environment、Main 角色）不會被裁剪，這是目前已知的上限——"
+                "若場景本身角色多、敘事長，可考慮把非主要角色標成 Secondary／"
+                "Background（見 PromptBuilder 的 Character Priority 機制）讓它們的"
+                "描述先被裁剪，或縮短故事原文／角色描述才能進一步改善。"
             )
 
         return [(category, sections[category]) for category, _ in ordered_sections], log
