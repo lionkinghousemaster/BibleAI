@@ -14,7 +14,7 @@
       "camera": "slow_zoom_in",
       "narration_zh": "很久很久以前，世界還沒有開始，只有黑暗和寂靜。但是，神一直都在那裡。",
       "narration_en": "Long, long ago, before the world began, there was only darkness and quiet. But God was already there.",
-      "image_prompt": "A vast dark cosmic void filled with soft deep blue and purple hues, tiny twinkling stars beginning to appear, a gentle warm golden light softly glowing at the center suggesting God's presence, children's storybook illustration style, soft watercolor texture, warm and peaceful mood, no scary or harsh elements, 2D flat illustration for kids",
+      "image_prompt": "A vast dark cosmic void filled with soft deep blue and purple hues, tiny twinkling stars beginning to appear, a gentle warm golden light softly glowing at the center suggesting God's presence, warm and peaceful mood, no scary or harsh elements",
       "animation_prompt": "Slow gentle zoom into the dark void, soft golden light pulsing softly like a calm heartbeat, tiny stars twinkling one by one, camera drifts slowly forward, dreamy and peaceful pacing, soft particle effects floating gently",
       "subtitle": "太初，只有黑暗，神的靈運行在水面上。\nIn the beginning, only darkness — and God was there.",
       "duration": 10
@@ -26,7 +26,7 @@
       "camera": "slow_zoom_out",
       "narration_zh": "神說：「要有光！」於是，光就出現了。神看光是好的，就把光和暗分開，稱光為「晝」，稱暗為「夜」。",
       "narration_en": "God said, \"Let there be light!\" And light appeared. God saw that the light was good, and He separated the light from the darkness, calling the light \"day\" and the darkness \"night.\"",
-      "image_prompt": "A joyful burst of warm golden sunlight breaking through deep blue darkness, radiant light rays spreading like a sunrise, warm yellow and soft orange tones meeting cool blue night tones, children's storybook illustration style, soft watercolor texture, warm glowing highlights, gentle and magical mood, 2D flat illustration for kids",
+      "image_prompt": "A joyful burst of warm golden sunlight breaking through deep blue darkness, radiant light rays spreading like a sunrise, warm yellow and soft orange tones meeting cool blue night tones, warm glowing highlights, gentle and magical mood",
       "animation_prompt": "Light bursts gently from the center of the screen, warm golden rays expanding outward, darkness softly recedes to the edges of frame, gentle glowing pulse effect, camera slowly pulls back to reveal a peaceful balance of light and dark side by side",
       "subtitle": "神說：「要有光！」於是就有了光。\nGod said, \"Let there be light!\" And there was light.",
       "duration": 12
@@ -38,7 +38,7 @@
       "camera": "pan_left",
       "narration_zh": "神把水分開，一部分在天上，一部分在地上，中間就出現了美麗的天空。神稱天空為「天」。",
       "narration_en": "God separated the waters, some above and some below, and in between appeared a beautiful sky. God called the sky \"heaven.\"",
-      "image_prompt": "A dreamy soft blue sky forming between fluffy white clouds above and calm sparkling waters below, gentle gradient from light blue to soft white, whimsical storybook clouds, children's storybook illustration style, soft watercolor texture, warm and airy mood, 2D flat illustration for kids",
+      "image_prompt": "A dreamy soft blue sky forming between fluffy white clouds above and calm sparkling waters below, gentle gradient from light blue to soft white, whimsical storybook clouds, warm and airy mood",
       "animation_prompt": "Camera slowly pans upward from a calm water surface through soft mist into an opening blue sky, fluffy clouds drift gently across the frame, light rays softly filter through, peaceful and airy motion",
       "subtitle": "神將水分開，形成美麗的天空。\nGod separated the waters and made the beautiful sky.",
       "duration": 10
@@ -50,7 +50,7 @@
       "camera": "pan_right",
       "narration_zh": "神說：「水要聚在一起，讓陸地出現！」於是，海洋和陸地都出現了。神看這一切都是好的。",
       "narration_en": "God said, \"Let the waters gather together, so dry land can appear!\" And so the oceans and the land appeared. God saw that it was good.",
-      "image_prompt": "Gentle rolling ocean waves pulling back to reveal soft green and brown hills of new dry land emerging, warm sunlight over calm blue sea meeting fresh earthy land, children's storybook illustration style, soft watercolor texture, warm and hopeful mood, 2D flat illustration for kids",
+      "image_prompt": "Gentle rolling ocean waves pulling back to reveal soft green and brown hills of new dry land emerging, warm sunlight over calm blue sea meeting fresh earthy land, warm and hopeful mood",
       "animation_prompt": "Aerial camera slowly gliding over calm ocean water, gentle waves rolling, land gradually rising and revealing itself from the water with soft glowing edges, smooth and calming motion",
       "subtitle": "海洋和陸地出現了！\nThe oceans and the land appeared!",
       "duration": 10
@@ -62,7 +62,7 @@
       "camera": "slow_zoom_out",
       "narration_zh": "神又說：「讓地上長出花草樹木！」很快地，綠色的草地、五顏六色的花朵和高大的樹木都長出來了。",
       "narration_en": "Then God said, \"Let the land grow plants and trees!\" Soon, green grass, colorful flowers, and tall trees sprang up everywhere.",
-      "image_prompt": "Lush green meadow bursting with colorful wildflowers in pink, yellow, and purple, tall friendly trees with round leafy canopies, soft sunlight filtering through leaves, children's storybook illustration style, soft watercolor texture, vibrant yet warm color palette, 2D flat illustration for kids",
+      "image_prompt": "Lush green meadow bursting with colorful wildflowers in pink, yellow, and purple, tall friendly trees with round leafy canopies, soft sunlight filtering through leaves, vibrant yet warm color palette",
       "animation_prompt": "Time-lapse style gentle growth animation, grass blades and flowers popping up and blooming one after another across the meadow, trees slowly growing taller with leaves unfurling, cheerful bouncy motion, soft sparkle effects on blooming flowers",
       "subtitle": "花草樹木都從地上長出來了！\nPlants and trees grew all over the land!",
       "duration": 11
@@ -74,7 +74,7 @@
       "camera": "pan_right",
       "narration_zh": "神在天空造了太陽管白天，月亮和星星管夜晚。從此，天空總是又亮又美麗。",
       "narration_en": "God placed the sun in the sky to rule the day, and the moon and stars to light up the night. The sky was always bright and beautiful.",
-      "image_prompt": "Split sky scene with a warm glowing sun on one side and a soft crescent moon surrounded by twinkling stars on the other, gentle gradient transition from day blue to night indigo, children's storybook illustration style, soft watercolor texture, magical and cozy mood, 2D flat illustration for kids",
+      "image_prompt": "Split sky scene with a warm glowing sun on one side and a soft crescent moon surrounded by twinkling stars on the other, gentle gradient transition from day blue to night indigo, magical and cozy mood",
       "animation_prompt": "Sun gently rises and glows warmly on one side of the sky while camera pans across to reveal the moon rising with twinkling stars appearing one by one on the other side, smooth day-to-night transition, soft twinkling star sparkle effects",
       "subtitle": "太陽、月亮和星星，讓天空又亮又美麗。\nThe sun, moon, and stars filled the sky with light.",
       "duration": 12
@@ -86,7 +86,7 @@
       "camera": "pan_left",
       "narration_zh": "神說：「水裡要充滿魚兒，天空要飛滿鳥兒！」於是，各種魚兒在海裡游，各種鳥兒在天空飛。",
       "narration_en": "God said, \"Let the waters be filled with fish, and let birds fly across the sky!\" So all kinds of fish swam in the sea, and all kinds of birds flew in the sky.",
-      "image_prompt": "Colorful friendly fish of many shapes swimming through clear blue ocean water, cheerful birds with bright feathers soaring through a sunny sky above, children's storybook illustration style, soft watercolor texture, playful and lively mood, warm color palette, 2D flat illustration for kids",
+      "image_prompt": "Colorful friendly fish of many shapes swimming through clear blue ocean water, cheerful birds with bright feathers soaring through a sunny sky above, playful and lively mood, warm color palette",
       "animation_prompt": "Split scene animation, camera underwater following a school of colorful fish swimming and darting playfully, then rising above the water surface to follow birds gliding and flapping happily across a bright sky, smooth flowing transition between water and sky",
       "subtitle": "魚兒在水裡游，鳥兒在天空飛。\nFish swam in the sea, and birds flew in the sky.",
       "duration": 12
@@ -98,7 +98,7 @@
       "camera": "pan_right",
       "narration_zh": "神又說：「讓地上充滿各種動物！」於是，獅子、大象、小兔子和許多可愛的動物都出現了。",
       "narration_en": "Then God said, \"Let the land be filled with all kinds of animals!\" And so lions, elephants, bunnies, and many other lovable creatures appeared.",
-      "image_prompt": "A cheerful gathering of friendly cartoon-style animals including a gentle lion, a playful elephant, a small bunny, and colorful birds standing together in a sunny green meadow, children's storybook illustration style, soft watercolor texture, warm and joyful mood, 2D flat illustration for kids",
+      "image_prompt": "A cheerful gathering of friendly cartoon-style animals including a gentle lion, a playful elephant, a small bunny, and colorful birds standing together in a sunny green meadow, warm and joyful mood",
       "animation_prompt": "Animals gently appear one by one across the meadow with a soft glowing pop-in effect, lion stretching and yawning happily, elephant swaying its trunk, bunny hopping cheerfully, camera slowly pans across the joyful gathering",
       "subtitle": "地上充滿了各種可愛的動物。\nThe land was filled with all kinds of lovable animals.",
       "duration": 12
@@ -110,7 +110,7 @@
       "camera": "slow_zoom_out",
       "narration_zh": "最後，神照著自己的樣式造了人，叫他們亞當和夏娃。神很愛他們，把美麗的世界交給他們照顧。",
       "narration_en": "Last of all, God made people in His own image, and He called them Adam and Eve. God loved them very much and gave them the beautiful world to take care of.",
-      "image_prompt": "A warm and gentle illustration of a kind man and woman (Adam and Eve) standing together in a lush sunlit garden, surrounded by friendly animals and blooming flowers, soft golden light shining down from above symbolizing God's love, children's storybook illustration style, modest simple clothing made of soft leaves or plain fabric, soft watercolor texture, tender and loving mood, 2D flat illustration for kids, wholesome and age-appropriate",
+      "image_prompt": "A warm and gentle illustration of a kind man and woman (Adam and Eve) standing together in a lush sunlit garden, surrounded by friendly animals and blooming flowers, soft golden light shining down from above symbolizing God's love, modest simple clothing made of soft leaves or plain fabric, tender and loving mood, wholesome and age-appropriate",
       "animation_prompt": "Gentle golden light descends softly from above onto the man and woman, they look up with joyful peaceful expressions, surrounding animals and flowers sway softly, camera slowly zooms out to reveal the whole beautiful garden around them",
       "subtitle": "神照自己的樣式造了亞當和夏娃，把世界交給他們照顧。\nGod made Adam and Eve, and gave them the world to care for.",
       "duration": 13
@@ -122,7 +122,7 @@
       "camera": "slow_zoom_out",
       "narration_zh": "神看著自己創造的一切，覺得非常好。到了第七天，神休息了，並且賜福給這一天，稱它為聖日。",
       "narration_en": "God looked at everything He had made, and it was very good. On the seventh day, God rested and blessed that day, calling it holy.",
-      "image_prompt": "A peaceful sunset scene over the completed beautiful world, mountains, meadows, calm ocean, animals resting together, soft warm orange and pink sky, a gentle glowing light resting peacefully above the scene symbolizing God's presence, children's storybook illustration style, soft watercolor texture, calm and serene mood, 2D flat illustration for kids",
+      "image_prompt": "A peaceful sunset scene over the completed beautiful world, mountains, meadows, calm ocean, animals resting together, soft warm orange and pink sky, a gentle glowing light resting peacefully above the scene symbolizing God's presence, calm and serene mood",
       "animation_prompt": "Slow peaceful camera pull-back revealing the whole created world at rest, animals settling down to sleep, soft golden light gently fading into a warm calm glow, gentle breathing-like pulse of light, soft ambient particle drift",
       "subtitle": "神看一切都很好，第七天，祂就安息了。\nGod saw that it was very good, and on the seventh day, He rested.",
       "duration": 11
@@ -134,7 +134,7 @@
       "camera": "slow_zoom_in",
       "narration_zh": "神創造了美麗的世界，也創造了你。祂很愛你，就像愛亞當和夏娃一樣。下一集，我們要繼續認識神奇妙的創造！",
       "narration_en": "God made this beautiful world, and He made you too. He loves you just as much as He loved Adam and Eve. Next time, we'll continue discovering God's wonderful creation!",
-      "image_prompt": "A warm inviting scene of the whole created world glowing softly under a rainbow, small children silhouettes looking up in wonder and joy, gentle golden light shining down, children's storybook illustration style, soft watercolor texture, hopeful and heartwarming mood, 2D flat illustration for kids",
+      "image_prompt": "A warm inviting scene of the whole created world glowing softly under a rainbow, small children silhouettes looking up in wonder and joy, gentle golden light shining down, hopeful and heartwarming mood",
       "animation_prompt": "Gentle rainbow arcs softly across the sky, warm light glows brighter, camera slowly zooms in on smiling children silhouettes looking up in wonder, soft sparkle particles rise upward, screen gently fades to warm golden light for episode ending",
       "subtitle": "神愛你，就像愛亞當和夏娃一樣！下集見！\nGod loves you, just like Adam and Eve! See you next time!",
       "duration": 13
